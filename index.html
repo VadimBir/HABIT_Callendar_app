@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#2196F3">
+    <meta name="description" content="Adaptive Calendar & Task Manager">
+    <title>HABIT Calendar</title>
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📅</text></svg>">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Month/Year Header -->
+    <header id="month-year-header">
+        <button id="prev-month" aria-label="Previous month">‹</button>
+        <h1 id="current-month-year">November 2025</h1>
+        <button id="next-month" aria-label="Next month">›</button>
+        <button id="settings-btn" aria-label="Settings">⚙️</button>
+    </header>
+
+    <!-- Main Container -->
+    <div id="main-container">
+        <!-- Filter Sidebar -->
+        <aside id="filter-sidebar">
+            <h3>Calendars</h3>
+            <div id="color-filters">
+                <!-- Color filters will be dynamically added -->
+            </div>
+        </aside>
+
+        <!-- Calendar & Task View Container -->
+        <div id="content-container">
+            <!-- Top Section: Calendar -->
+            <section id="calendar-section">
+                <div id="calendar-grid">
+                    <!-- Week headers -->
+                    <div class="week-header">
+                        <div class="day-name">Mon</div>
+                        <div class="day-name">Tue</div>
+                        <div class="day-name">Wed</div>
+                        <div class="day-name">Thu</div>
+                        <div class="day-name">Fri</div>
+                        <div class="day-name">Sat</div>
+                        <div class="day-name">Sun</div>
+                    </div>
+                    <!-- Calendar weeks will be dynamically added -->
+                    <div id="weeks-container"></div>
+                </div>
+            </section>
+
+            <!-- Draggable Divider -->
+            <div id="split-divider">
+                <div id="divider-handle"></div>
+            </div>
+
+            <!-- Bottom Section: Task List -->
+            <section id="task-list-section">
+                <h2>All Tasks</h2>
+                <div id="task-list">
+                    <!-- Tasks will be dynamically added -->
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Floating ADD Button -->
+    <button id="add-task-btn" aria-label="Add new task">+</button>
+
+    <!-- Task Modal -->
+    <div id="task-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2 id="modal-title">New Task</h2>
+
+            <form id="task-form">
+                <!-- Title -->
+                <div class="form-group">
+                    <label for="task-title">Title *</label>
+                    <input type="text" id="task-title" required maxlength="100">
+                </div>
+
+                <!-- Color Group -->
+                <div class="form-group">
+                    <label for="task-color">Color Group *</label>
+                    <div id="color-group-selector">
+                        <select id="task-color" required>
+                            <!-- Options will be dynamically added -->
+                        </select>
+                        <button type="button" id="add-color-btn">+ New</button>
+                    </div>
+                </div>
+
+                <!-- Task Type -->
+                <div class="form-group">
+                    <label for="task-type">Type *</label>
+                    <select id="task-type" required>
+                        <option value="fixed">Fixed - Exact date/time event</option>
+                        <option value="continuous">Continuous - Ongoing until done</option>
+                        <option value="dynamic">Dynamic - Flexible deadline</option>
+                    </select>
+                </div>
+
+                <!-- Date/Time (for fixed and dynamic) -->
+                <div class="form-group" id="datetime-group">
+                    <label for="task-start-date">Start Date/Time</label>
+                    <input type="datetime-local" id="task-start-date">
+
+                    <label for="task-due-date">Due Date/Time *</label>
+                    <input type="datetime-local" id="task-due-date" required>
+                </div>
+
+                <!-- Reminder Type (for dynamic) -->
+                <div class="form-group" id="reminder-type-group" style="display: none;">
+                    <label>Reminder Type</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="reminder-type" value="D2D"> D2D (Day to Day)</label>
+                        <label><input type="radio" name="reminder-type" value="W2W"> W2W (Week to Week)</label>
+                        <label><input type="radio" name="reminder-type" value="M2M" checked> M2M (Month to Month)</label>
+                    </div>
+                </div>
+
+                <!-- Reminders -->
+                <div class="form-group">
+                    <label>Reminders</label>
+                    <div id="reminders-container">
+                        <!-- Reminders will be added dynamically -->
+                    </div>
+                    <button type="button" id="add-reminder-btn">+ Add Reminder</button>
+                </div>
+
+                <!-- Description -->
+                <div class="form-group">
+                    <label for="task-description">Description</label>
+                    <textarea id="task-description" rows="3" maxlength="500"></textarea>
+                </div>
+
+                <!-- Submit Buttons -->
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" id="cancel-task-btn">Cancel</button>
+                    <button type="submit" class="btn-primary">Save Task</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Day Detail Modal -->
+    <div id="day-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2 id="day-modal-title">Tasks for Today</h2>
+            <div id="day-tasks-list">
+                <!-- Day tasks will be shown here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>Settings</h2>
+
+            <div class="settings-section">
+                <h3>Notifications</h3>
+                <label class="switch">
+                    <input type="checkbox" id="enable-notifications">
+                    <span class="slider"></span>
+                    Enable Notifications
+                </label>
+                <button id="test-notification-btn" class="btn-secondary">Test Notification</button>
+            </div>
+
+            <div class="settings-section">
+                <h3>Data Management</h3>
+                <button id="export-data-btn" class="btn-secondary">Export Data</button>
+                <button id="import-data-btn" class="btn-secondary">Import Data</button>
+                <input type="file" id="import-file-input" accept=".json" style="display: none;">
+                <button id="clear-data-btn" class="btn-danger">Clear All Data</button>
+            </div>
+
+            <div class="settings-section">
+                <h3>About</h3>
+                <p>HABIT Calendar v1.0</p>
+                <p>Adaptive task & calendar manager</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Color Group Modal -->
+    <div id="color-modal" class="modal">
+        <div class="modal-content small">
+            <span class="close-modal">&times;</span>
+            <h2>New Color Group</h2>
+
+            <form id="color-form">
+                <div class="form-group">
+                    <label for="color-name">Group Name *</label>
+                    <input type="text" id="color-name" required maxlength="30">
+                </div>
+
+                <div class="form-group">
+                    <label for="color-picker">Color *</label>
+                    <input type="color" id="color-picker" value="#2196F3" required>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary cancel-color-btn">Cancel</button>
+                    <button type="submit" class="btn-primary">Create</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="storage.js"></script>
+    <script src="notifications.js"></script>
+    <script src="tasks.js"></script>
+    <script src="calendar.js"></script>
+    <script src="gestures.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
