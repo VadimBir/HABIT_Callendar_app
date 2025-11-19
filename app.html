@@ -1,0 +1,1334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="theme-color" content="#1a73e8">
+    <title>HABIT Calendar</title>
+    <style>
+        /* Reset & Base */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --primary: #1a73e8;
+            --bg: #fff;
+            --bg2: #f8f9fa;
+            --text: #3c4043;
+            --text2: #70757a;
+            --border: #dadce0;
+        }
+
+        html, body {
+            height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 14px;
+            color: var(--text);
+            background: var(--bg);
+            overflow: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        #header {
+            height: 56px;
+            background: var(--bg);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 8px;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        #header h1 {
+            font-size: 18px;
+            font-weight: 400;
+            flex: 1;
+        }
+
+        #header button {
+            background: none;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 6px 12px;
+            font-size: 14px;
+            color: var(--text);
+            cursor: pointer;
+        }
+
+        #header button:active {
+            background: var(--bg2);
+        }
+
+        .nav-btn {
+            border: none !important;
+            padding: 6px 10px !important;
+            font-size: 18px !important;
+        }
+
+        #settings-btn {
+            border: none !important;
+            font-size: 18px !important;
+        }
+
+        /* Main */
+        #main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Calendar */
+        #calendar {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Day Headers */
+        .day-headers {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            border-bottom: 1px solid var(--border);
+            background: var(--bg);
+        }
+
+        .day-header {
+            padding: 8px 0;
+            text-align: center;
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text2);
+            text-transform: uppercase;
+        }
+
+        /* Calendar Grid */
+        #calendar-grid {
+            flex: 1;
+            display: grid;
+            grid-template-rows: repeat(6, 1fr);
+        }
+
+        .calendar-row {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .calendar-row:last-child {
+            border-bottom: none;
+        }
+
+        /* Day Cell */
+        .day-cell {
+            border-right: 1px solid var(--border);
+            padding: 2px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-height: 0;
+        }
+
+        .day-cell:last-child {
+            border-right: none;
+        }
+
+        .day-cell:active {
+            background: var(--bg2);
+        }
+
+        .day-cell.other-month {
+            background: var(--bg2);
+        }
+
+        .day-cell.other-month .day-num {
+            color: var(--text2);
+        }
+
+        /* Day Number */
+        .day-num {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            border-radius: 50%;
+            margin-bottom: 2px;
+        }
+
+        .day-cell.today .day-num {
+            background: var(--primary);
+            color: #fff;
+            font-weight: 500;
+        }
+
+        /* Events in Day */
+        .day-events {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+            overflow: hidden;
+        }
+
+        .event-bar {
+            height: 14px;
+            border-radius: 2px;
+            padding: 0 3px;
+            font-size: 9px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .event-bar.continuous {
+            background: transparent !important;
+            border: 1px solid;
+            color: var(--text);
+        }
+
+        .event-more {
+            font-size: 9px;
+            color: var(--text2);
+            padding: 1px 3px;
+        }
+
+        /* Divider */
+        #divider {
+            height: 8px;
+            background: var(--border);
+            cursor: ns-resize;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        #divider-handle {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 32px;
+            height: 4px;
+            background: var(--text2);
+            border-radius: 2px;
+        }
+
+        /* Task Panel */
+        #task-panel {
+            height: 25vh;
+            min-height: 80px;
+            background: var(--bg);
+            border-top: 1px solid var(--border);
+            overflow-y: auto;
+            padding: 8px;
+            flex-shrink: 0;
+        }
+
+        #task-panel h2 {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text2);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        #task-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .task-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            background: var(--bg2);
+            border-radius: 4px;
+            border-left: 3px solid;
+        }
+
+        .task-item input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+        }
+
+        .task-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .task-title {
+            font-size: 13px;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .task-meta {
+            font-size: 11px;
+            color: var(--text2);
+        }
+
+        /* FAB */
+        #fab {
+            position: fixed;
+            bottom: 16px;
+            right: 16px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #fab:active {
+            transform: scale(0.95);
+        }
+
+        /* Modals */
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--bg);
+            border-radius: 8px;
+            width: 100%;
+            max-width: 400px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: var(--text2);
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .modal-body {
+            padding: 16px;
+        }
+
+        /* Forms */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text2);
+            margin-bottom: 6px;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: 2px solid var(--primary);
+            border-color: transparent;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .form-row > * {
+            flex: 1;
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .radio-group label {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: normal;
+            margin: 0;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            padding: 16px;
+            border-top: 1px solid var(--border);
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: #fff;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--primary);
+        }
+
+        .btn-danger {
+            background: #d93025;
+            color: #fff;
+        }
+
+        /* Reminders */
+        #reminders-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .reminder-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .reminder-row input,
+        .reminder-row select {
+            flex: 1;
+            padding: 8px;
+        }
+
+        .reminder-row button {
+            background: none;
+            border: none;
+            color: #d93025;
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        .text-btn {
+            background: none;
+            border: 1px solid var(--border);
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            color: var(--primary);
+            cursor: pointer;
+        }
+
+        /* Day Modal Events */
+        .day-event-item {
+            padding: 12px;
+            background: var(--bg2);
+            border-left: 3px solid;
+            border-radius: 4px;
+            margin-bottom: 8px;
+        }
+
+        .day-event-time {
+            font-size: 11px;
+            color: var(--text2);
+            margin-bottom: 4px;
+        }
+
+        .day-event-title {
+            font-weight: 500;
+        }
+
+        /* Settings */
+        .setting-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .setting-row input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+        }
+
+        /* Empty state */
+        .empty {
+            text-align: center;
+            color: var(--text2);
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header id="header">
+        <button id="today-btn">Today</button>
+        <button class="nav-btn" id="prev-btn">‹</button>
+        <button class="nav-btn" id="next-btn">›</button>
+        <h1 id="month-title">November 2025</h1>
+        <button id="settings-btn">⚙</button>
+    </header>
+
+    <!-- Main -->
+    <main id="main">
+        <!-- Calendar -->
+        <div id="calendar">
+            <div class="day-headers">
+                <div class="day-header">Mon</div>
+                <div class="day-header">Tue</div>
+                <div class="day-header">Wed</div>
+                <div class="day-header">Thu</div>
+                <div class="day-header">Fri</div>
+                <div class="day-header">Sat</div>
+                <div class="day-header">Sun</div>
+            </div>
+            <div id="calendar-grid"></div>
+        </div>
+
+        <!-- Divider -->
+        <div id="divider">
+            <div id="divider-handle"></div>
+        </div>
+
+        <!-- Task Panel -->
+        <div id="task-panel">
+            <h2>Tasks</h2>
+            <div id="task-list"></div>
+        </div>
+    </main>
+
+    <!-- FAB -->
+    <button id="fab">+</button>
+
+    <!-- Task Modal -->
+    <div id="task-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>New Task</h2>
+                <button class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Title</label>
+                    <input type="text" id="task-title" placeholder="Add title" required>
+                </div>
+                <div class="form-group">
+                    <label>Calendar</label>
+                    <div class="form-row">
+                        <select id="task-color"></select>
+                        <button type="button" class="text-btn" id="new-color-btn">+ New</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Type</label>
+                    <select id="task-type">
+                        <option value="fixed">Fixed</option>
+                        <option value="continuous">Continuous</option>
+                        <option value="dynamic">Dynamic</option>
+                    </select>
+                </div>
+                <div class="form-group" id="date-group">
+                    <label>Start</label>
+                    <input type="datetime-local" id="task-start">
+                    <label style="margin-top:8px">End</label>
+                    <input type="datetime-local" id="task-end">
+                </div>
+                <div class="form-group" id="reminder-type-group" style="display:none">
+                    <label>Reminder Type</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="rtype" value="D2D"> D2D</label>
+                        <label><input type="radio" name="rtype" value="W2W"> W2W</label>
+                        <label><input type="radio" name="rtype" value="M2M" checked> M2M</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Reminders</label>
+                    <div id="reminders-list"></div>
+                    <button type="button" class="text-btn" id="add-reminder-btn">+ Add reminder</button>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="task-desc" rows="2"></textarea>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button class="btn btn-secondary" id="cancel-btn">Cancel</button>
+                <button class="btn btn-primary" id="save-btn">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Day Modal -->
+    <div id="day-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="day-title">November 19</h2>
+                <button class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body" id="day-events"></div>
+        </div>
+    </div>
+
+    <!-- Color Modal -->
+    <div id="color-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>New Calendar</h2>
+                <button class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Name</label>
+                    <input type="text" id="color-name" placeholder="Calendar name">
+                </div>
+                <div class="form-group">
+                    <label>Color</label>
+                    <input type="color" id="color-value" value="#1a73e8">
+                </div>
+            </div>
+            <div class="form-actions">
+                <button class="btn btn-secondary" id="cancel-color-btn">Cancel</button>
+                <button class="btn btn-primary" id="save-color-btn">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Settings</h2>
+                <button class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="setting-row">
+                    <input type="checkbox" id="notif-toggle">
+                    <span>Enable notifications</span>
+                </div>
+                <button class="btn btn-secondary" id="export-btn" style="margin-right:8px">Export</button>
+                <button class="btn btn-secondary" id="import-btn">Import</button>
+                <input type="file" id="import-file" accept=".json" hidden>
+                <br><br>
+                <button class="btn btn-danger" id="clear-btn">Clear all data</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== STORAGE =====
+        const KEYS = {
+            TASKS: 'habit_tasks',
+            COLORS: 'habit_colors',
+            SETTINGS: 'habit_settings'
+        };
+
+        function genId() {
+            return Date.now().toString(36) + Math.random().toString(36).substr(2);
+        }
+
+        function getTasks() {
+            return JSON.parse(localStorage.getItem(KEYS.TASKS) || '[]');
+        }
+
+        function saveTasks(tasks) {
+            localStorage.setItem(KEYS.TASKS, JSON.stringify(tasks));
+        }
+
+        function getColors() {
+            let colors = JSON.parse(localStorage.getItem(KEYS.COLORS) || '[]');
+            if (!colors.length) {
+                colors = [
+                    { id: genId(), name: 'Work', color: '#1a73e8', count: 0 },
+                    { id: genId(), name: 'Personal', color: '#0b8043', count: 0 },
+                    { id: genId(), name: 'Health', color: '#d93025', count: 0 }
+                ];
+                saveColors(colors);
+            }
+            return colors;
+        }
+
+        function saveColors(colors) {
+            localStorage.setItem(KEYS.COLORS, JSON.stringify(colors));
+        }
+
+        function getSettings() {
+            return JSON.parse(localStorage.getItem(KEYS.SETTINGS) || '{"notifications":false}');
+        }
+
+        function saveSettings(settings) {
+            localStorage.setItem(KEYS.SETTINGS, JSON.stringify(settings));
+        }
+
+        // ===== APP STATE =====
+        let currentYear = new Date().getFullYear();
+        let currentMonth = new Date().getMonth();
+        let editingTaskId = null;
+
+        // ===== CALENDAR RENDERING =====
+        function renderCalendar() {
+            const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+            document.getElementById('month-title').textContent = `${months[currentMonth]} ${currentYear}`;
+
+            const grid = document.getElementById('calendar-grid');
+            grid.innerHTML = '';
+
+            // Get first day of month
+            const firstDay = new Date(currentYear, currentMonth, 1);
+            const startOffset = (firstDay.getDay() + 6) % 7; // Monday = 0
+
+            // Start date
+            const startDate = new Date(firstDay);
+            startDate.setDate(startDate.getDate() - startOffset);
+
+            const today = new Date();
+            const tasks = getTasks();
+            const colors = getColors();
+
+            // 6 weeks
+            for (let week = 0; week < 6; week++) {
+                const row = document.createElement('div');
+                row.className = 'calendar-row';
+
+                for (let day = 0; day < 7; day++) {
+                    const date = new Date(startDate);
+                    date.setDate(startDate.getDate() + (week * 7) + day);
+
+                    const cell = document.createElement('div');
+                    cell.className = 'day-cell';
+
+                    if (date.getMonth() !== currentMonth) {
+                        cell.classList.add('other-month');
+                    }
+
+                    if (date.toDateString() === today.toDateString()) {
+                        cell.classList.add('today');
+                    }
+
+                    // Day number
+                    const num = document.createElement('div');
+                    num.className = 'day-num';
+                    num.textContent = date.getDate();
+                    cell.appendChild(num);
+
+                    // Events
+                    const events = document.createElement('div');
+                    events.className = 'day-events';
+
+                    const dayTasks = getTasksForDate(tasks, date);
+                    const maxShow = 2;
+
+                    dayTasks.slice(0, maxShow).forEach(task => {
+                        const bar = document.createElement('div');
+                        bar.className = 'event-bar';
+                        const color = colors.find(c => c.id === task.colorGroupId);
+
+                        if (task.type === 'continuous') {
+                            bar.classList.add('continuous');
+                            bar.style.borderColor = color ? color.color : '#999';
+                        } else {
+                            bar.style.backgroundColor = color ? color.color : '#999';
+                        }
+
+                        let title = task.title;
+                        if (task.type === 'dynamic' && task.postponeCount > 0) {
+                            title += ` (+${task.postponeCount}d)`;
+                        }
+                        bar.textContent = title;
+                        bar.onclick = (e) => {
+                            e.stopPropagation();
+                            showTaskModal(task);
+                        };
+                        events.appendChild(bar);
+                    });
+
+                    if (dayTasks.length > maxShow) {
+                        const more = document.createElement('div');
+                        more.className = 'event-more';
+                        more.textContent = `+${dayTasks.length - maxShow} more`;
+                        events.appendChild(more);
+                    }
+
+                    cell.appendChild(events);
+
+                    // Click to show day
+                    cell.onclick = () => showDayModal(date);
+
+                    row.appendChild(cell);
+                }
+
+                grid.appendChild(row);
+            }
+        }
+
+        function getTasksForDate(tasks, date) {
+            const dateStr = formatDate(date);
+            return tasks.filter(task => {
+                if (task.completed && task.type !== 'continuous') return false;
+
+                if (task.type === 'continuous') {
+                    const created = new Date(task.createdAt);
+                    const completed = task.completedAt ? new Date(task.completedAt) : null;
+                    return created <= date && (!completed || completed >= date);
+                }
+
+                const start = task.startDate ? formatDate(new Date(task.startDate)) : formatDate(new Date(task.dueDate));
+                const end = formatDate(new Date(task.dueDate));
+                return dateStr >= start && dateStr <= end;
+            });
+        }
+
+        function formatDate(d) {
+            return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        }
+
+        // ===== TASK LIST =====
+        function renderTaskList() {
+            const list = document.getElementById('task-list');
+            list.innerHTML = '';
+
+            const tasks = getTasks().filter(t => !t.completed || t.type === 'continuous');
+            const colors = getColors();
+
+            // Sort by due date
+            tasks.sort((a, b) => {
+                if (!a.dueDate) return 1;
+                if (!b.dueDate) return -1;
+                return new Date(a.dueDate) - new Date(b.dueDate);
+            });
+
+            if (!tasks.length) {
+                list.innerHTML = '<div class="empty">No tasks</div>';
+                return;
+            }
+
+            tasks.forEach(task => {
+                const item = document.createElement('div');
+                item.className = 'task-item';
+                const color = colors.find(c => c.id === task.colorGroupId);
+                item.style.borderLeftColor = color ? color.color : '#999';
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.checked = task.completed;
+                checkbox.onchange = () => toggleTask(task.id);
+
+                const info = document.createElement('div');
+                info.className = 'task-info';
+                info.onclick = () => showTaskModal(task);
+
+                const title = document.createElement('div');
+                title.className = 'task-title';
+                title.textContent = task.title;
+
+                const meta = document.createElement('div');
+                meta.className = 'task-meta';
+                if (task.dueDate) {
+                    const d = new Date(task.dueDate);
+                    meta.textContent = d.toLocaleDateString([], {month:'short', day:'numeric'});
+                }
+                if (task.type === 'dynamic' && task.postponeCount > 0) {
+                    meta.textContent += ` (+${task.postponeCount}d)`;
+                }
+
+                info.appendChild(title);
+                info.appendChild(meta);
+                item.appendChild(checkbox);
+                item.appendChild(info);
+                list.appendChild(item);
+            });
+        }
+
+        function toggleTask(id) {
+            const tasks = getTasks();
+            const task = tasks.find(t => t.id === id);
+            if (task) {
+                task.completed = !task.completed;
+                task.completedAt = task.completed ? new Date().toISOString() : null;
+                saveTasks(tasks);
+                renderCalendar();
+                renderTaskList();
+            }
+        }
+
+        // ===== MODALS =====
+        function showTaskModal(task = null) {
+            editingTaskId = task ? task.id : null;
+
+            document.getElementById('task-title').value = task ? task.title : '';
+            document.getElementById('task-type').value = task ? task.type : 'fixed';
+            document.getElementById('task-desc').value = task ? (task.description || '') : '';
+
+            if (task && task.startDate) {
+                document.getElementById('task-start').value = formatDateTimeLocal(task.startDate);
+            } else {
+                document.getElementById('task-start').value = '';
+            }
+
+            if (task && task.dueDate) {
+                document.getElementById('task-end').value = formatDateTimeLocal(task.dueDate);
+            } else {
+                document.getElementById('task-end').value = '';
+            }
+
+            updateColorSelect(task ? task.colorGroupId : null);
+            updateTypeVisibility();
+
+            document.getElementById('reminders-list').innerHTML = '';
+            if (task && task.reminders) {
+                task.reminders.forEach(r => addReminderRow(r));
+            }
+
+            document.getElementById('task-modal').classList.add('active');
+        }
+
+        function hideTaskModal() {
+            document.getElementById('task-modal').classList.remove('active');
+            editingTaskId = null;
+        }
+
+        function showDayModal(date) {
+            const title = document.getElementById('day-title');
+            title.textContent = date.toLocaleDateString([], {weekday:'long', month:'long', day:'numeric'});
+
+            const events = document.getElementById('day-events');
+            events.innerHTML = '';
+
+            const tasks = getTasksForDate(getTasks(), date);
+            const colors = getColors();
+
+            if (!tasks.length) {
+                events.innerHTML = '<div class="empty">No tasks for this day</div>';
+            } else {
+                tasks.forEach(task => {
+                    const item = document.createElement('div');
+                    item.className = 'day-event-item';
+                    const color = colors.find(c => c.id === task.colorGroupId);
+                    item.style.borderLeftColor = color ? color.color : '#999';
+
+                    if (task.dueDate) {
+                        const time = document.createElement('div');
+                        time.className = 'day-event-time';
+                        const d = new Date(task.dueDate);
+                        time.textContent = d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                        item.appendChild(time);
+                    }
+
+                    const titleDiv = document.createElement('div');
+                    titleDiv.className = 'day-event-title';
+                    titleDiv.textContent = task.title;
+                    item.appendChild(titleDiv);
+
+                    item.onclick = () => {
+                        document.getElementById('day-modal').classList.remove('active');
+                        showTaskModal(task);
+                    };
+
+                    events.appendChild(item);
+                });
+            }
+
+            document.getElementById('day-modal').classList.add('active');
+        }
+
+        function updateColorSelect(selectedId) {
+            const select = document.getElementById('task-color');
+            const colors = getColors();
+            select.innerHTML = '';
+            colors.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.id;
+                opt.textContent = c.name;
+                if (c.id === selectedId) opt.selected = true;
+                select.appendChild(opt);
+            });
+        }
+
+        function updateTypeVisibility() {
+            const type = document.getElementById('task-type').value;
+            const dateGroup = document.getElementById('date-group');
+            const rtGroup = document.getElementById('reminder-type-group');
+
+            if (type === 'continuous') {
+                dateGroup.style.display = 'none';
+                rtGroup.style.display = 'none';
+            } else if (type === 'dynamic') {
+                dateGroup.style.display = 'block';
+                rtGroup.style.display = 'block';
+            } else {
+                dateGroup.style.display = 'block';
+                rtGroup.style.display = 'none';
+            }
+        }
+
+        function addReminderRow(reminder = null) {
+            const list = document.getElementById('reminders-list');
+            const row = document.createElement('div');
+            row.className = 'reminder-row';
+
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.min = '1';
+            input.value = reminder ? reminder.amount : '10';
+            input.placeholder = 'Amount';
+
+            const select = document.createElement('select');
+            ['minutes','hours','days','weeks'].forEach(u => {
+                const opt = document.createElement('option');
+                opt.value = u;
+                opt.textContent = u;
+                if (reminder && reminder.unit === u) opt.selected = true;
+                select.appendChild(opt);
+            });
+
+            const btn = document.createElement('button');
+            btn.textContent = '×';
+            btn.onclick = () => row.remove();
+
+            row.appendChild(input);
+            row.appendChild(select);
+            row.appendChild(btn);
+            list.appendChild(row);
+        }
+
+        function saveTask() {
+            const title = document.getElementById('task-title').value.trim();
+            if (!title) {
+                alert('Please enter a title');
+                return;
+            }
+
+            const type = document.getElementById('task-type').value;
+            const colorGroupId = document.getElementById('task-color').value;
+            const description = document.getElementById('task-desc').value.trim();
+
+            const task = {
+                id: editingTaskId || genId(),
+                title,
+                type,
+                colorGroupId,
+                description,
+                reminders: [],
+                createdAt: editingTaskId ? undefined : new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                completed: false
+            };
+
+            if (type !== 'continuous') {
+                const startVal = document.getElementById('task-start').value;
+                const endVal = document.getElementById('task-end').value;
+
+                if (!endVal) {
+                    alert('Please set an end date');
+                    return;
+                }
+
+                if (startVal) task.startDate = new Date(startVal).toISOString();
+                task.dueDate = new Date(endVal).toISOString();
+
+                if (type === 'dynamic') {
+                    const rt = document.querySelector('input[name="rtype"]:checked');
+                    task.reminderType = rt ? rt.value : 'M2M';
+                    task.originalDueDate = task.dueDate;
+                    task.postponeCount = 0;
+                }
+            }
+
+            // Get reminders
+            document.querySelectorAll('.reminder-row').forEach(row => {
+                const amount = row.querySelector('input').value;
+                const unit = row.querySelector('select').value;
+                if (amount) {
+                    task.reminders.push({ amount, unit });
+                }
+            });
+
+            const tasks = getTasks();
+            if (editingTaskId) {
+                const idx = tasks.findIndex(t => t.id === editingTaskId);
+                if (idx >= 0) {
+                    task.createdAt = tasks[idx].createdAt;
+                    task.completed = tasks[idx].completed;
+                    tasks[idx] = task;
+                }
+            } else {
+                // Update color count
+                const colors = getColors();
+                const color = colors.find(c => c.id === colorGroupId);
+                if (color) {
+                    color.count = (color.count || 0) + 1;
+                    saveColors(colors);
+                }
+                tasks.push(task);
+            }
+
+            saveTasks(tasks);
+            hideTaskModal();
+            renderCalendar();
+            renderTaskList();
+        }
+
+        function formatDateTimeLocal(isoString) {
+            const d = new Date(isoString);
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            const hours = String(d.getHours()).padStart(2, '0');
+            const mins = String(d.getMinutes()).padStart(2, '0');
+            return `${year}-${month}-${day}T${hours}:${mins}`;
+        }
+
+        // ===== COLOR MODAL =====
+        function showColorModal() {
+            document.getElementById('color-name').value = '';
+            document.getElementById('color-value').value = '#1a73e8';
+            document.getElementById('color-modal').classList.add('active');
+        }
+
+        function hideColorModal() {
+            document.getElementById('color-modal').classList.remove('active');
+        }
+
+        function saveColor() {
+            const name = document.getElementById('color-name').value.trim();
+            if (!name) {
+                alert('Please enter a name');
+                return;
+            }
+
+            const colors = getColors();
+            colors.push({
+                id: genId(),
+                name,
+                color: document.getElementById('color-value').value,
+                count: 0
+            });
+            saveColors(colors);
+            hideColorModal();
+            updateColorSelect();
+        }
+
+        // ===== SETTINGS =====
+        function showSettings() {
+            const settings = getSettings();
+            document.getElementById('notif-toggle').checked = settings.notifications;
+            document.getElementById('settings-modal').classList.add('active');
+        }
+
+        function hideSettings() {
+            document.getElementById('settings-modal').classList.remove('active');
+        }
+
+        function exportData() {
+            const data = {
+                tasks: getTasks(),
+                colors: getColors(),
+                settings: getSettings()
+            };
+            const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `habit-calendar-${Date.now()}.json`;
+            a.click();
+        }
+
+        function importData(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (data.tasks) saveTasks(data.tasks);
+                    if (data.colors) saveColors(data.colors);
+                    if (data.settings) saveSettings(data.settings);
+                    renderCalendar();
+                    renderTaskList();
+                    alert('Data imported!');
+                } catch (err) {
+                    alert('Invalid file');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function clearData() {
+            if (confirm('Clear ALL data? This cannot be undone!')) {
+                localStorage.clear();
+                location.reload();
+            }
+        }
+
+        // ===== DIVIDER DRAG =====
+        let isDragging = false;
+        let startY = 0;
+        let startHeight = 0;
+
+        document.getElementById('divider').addEventListener('touchstart', (e) => {
+            isDragging = true;
+            startY = e.touches[0].clientY;
+            startHeight = document.getElementById('task-panel').offsetHeight;
+        });
+
+        document.addEventListener('touchmove', (e) => {
+            if (!isDragging) return;
+            const deltaY = startY - e.touches[0].clientY;
+            const newHeight = Math.max(80, Math.min(window.innerHeight * 0.6, startHeight + deltaY));
+            document.getElementById('task-panel').style.height = newHeight + 'px';
+        });
+
+        document.addEventListener('touchend', () => {
+            isDragging = false;
+        });
+
+        // Mouse support
+        document.getElementById('divider').addEventListener('mousedown', (e) => {
+            isDragging = true;
+            startY = e.clientY;
+            startHeight = document.getElementById('task-panel').offsetHeight;
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            const deltaY = startY - e.clientY;
+            const newHeight = Math.max(80, Math.min(window.innerHeight * 0.6, startHeight + deltaY));
+            document.getElementById('task-panel').style.height = newHeight + 'px';
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        // ===== EVENT LISTENERS =====
+        document.getElementById('today-btn').onclick = () => {
+            const now = new Date();
+            currentYear = now.getFullYear();
+            currentMonth = now.getMonth();
+            renderCalendar();
+        };
+
+        document.getElementById('prev-btn').onclick = () => {
+            currentMonth--;
+            if (currentMonth < 0) {
+                currentMonth = 11;
+                currentYear--;
+            }
+            renderCalendar();
+        };
+
+        document.getElementById('next-btn').onclick = () => {
+            currentMonth++;
+            if (currentMonth > 11) {
+                currentMonth = 0;
+                currentYear++;
+            }
+            renderCalendar();
+        };
+
+        document.getElementById('settings-btn').onclick = showSettings;
+        document.getElementById('fab').onclick = () => showTaskModal();
+        document.getElementById('new-color-btn').onclick = showColorModal;
+        document.getElementById('add-reminder-btn').onclick = () => addReminderRow();
+        document.getElementById('task-type').onchange = updateTypeVisibility;
+
+        document.getElementById('save-btn').onclick = saveTask;
+        document.getElementById('cancel-btn').onclick = hideTaskModal;
+        document.getElementById('save-color-btn').onclick = saveColor;
+        document.getElementById('cancel-color-btn').onclick = hideColorModal;
+
+        document.getElementById('export-btn').onclick = exportData;
+        document.getElementById('import-btn').onclick = () => document.getElementById('import-file').click();
+        document.getElementById('import-file').onchange = (e) => {
+            if (e.target.files[0]) importData(e.target.files[0]);
+        };
+        document.getElementById('clear-btn').onclick = clearData;
+
+        document.getElementById('notif-toggle').onchange = (e) => {
+            const settings = getSettings();
+            settings.notifications = e.target.checked;
+            saveSettings(settings);
+            if (e.target.checked && 'Notification' in window) {
+                Notification.requestPermission();
+            }
+        };
+
+        // Close modals
+        document.querySelectorAll('.close-btn').forEach(btn => {
+            btn.onclick = () => btn.closest('.modal').classList.remove('active');
+        });
+
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.onclick = (e) => {
+                if (e.target === modal) modal.classList.remove('active');
+            };
+        });
+
+        // ===== INIT =====
+        renderCalendar();
+        renderTaskList();
+    </script>
+</body>
+</html>
