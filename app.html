@@ -144,6 +144,27 @@
             border-bottom: 1px solid var(--border);
         }
 
+        /* Zoom support */
+        #month-view, #scroll-view {
+            --week-height: 80px;
+            --total-days: 7;
+        }
+        #scroll-view .week-row {
+            min-height: var(--week-height);
+        }
+        #month-view {
+            grid-template-rows: repeat(6, minmax(var(--week-height), 1fr));
+        }
+        /* Horizontal zoom - show fewer days */
+        .week-row.zoom-5 { grid-template-columns: repeat(5, 1fr); }
+        .week-row.zoom-5 .day-cell:nth-child(6),
+        .week-row.zoom-5 .day-cell:nth-child(7) { display: none; }
+        .week-row.zoom-3 { grid-template-columns: repeat(3, 1fr); }
+        .week-row.zoom-3 .day-cell:nth-child(4),
+        .week-row.zoom-3 .day-cell:nth-child(5),
+        .week-row.zoom-3 .day-cell:nth-child(6),
+        .week-row.zoom-3 .day-cell:nth-child(7) { display: none; }
+
         /* Shared day cell styles */
         .week-row {
             display: grid;
@@ -1138,6 +1159,114 @@
             document.getElementById('task-panel').style.height = Math.max(60, Math.min(window.innerHeight * 0.6, startHeight + deltaY)) + 'px';
         });
         document.addEventListener('mouseup', () => { isDragging = false; });
+
+        // ===== PINCH ZOOM =====
+        let weekHeight = 80; // Base height in px
+        let daysZoom = 7; // 7, 5, or 3 days visible
+        let pinchStartDistance = 0;
+        let pinchStartAngle = 0;
+        let pinchStartHeight = 80;
+        let pinchStartDaysZoom = 7;
+        let isPinching = false;
+
+        function getDistance(touch1, touch2) {
+            const dx = touch2.clientX - touch1.clientX;
+            const dy = touch2.clientY - touch1.clientY;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+
+        function getAngle(touch1, touch2) {
+            const dx = touch2.clientX - touch1.clientX;
+            const dy = touch2.clientY - touch1.clientY;
+            return Math.atan2(dy, dx) * 180 / Math.PI;
+        }
+
+        function applyZoom() {
+            // Apply vertical zoom (week height)
+            const monthView = document.getElementById('month-view');
+            const scrollView = document.getElementById('scroll-view');
+
+            monthView.style.setProperty('--week-height', weekHeight + 'px');
+            scrollView.style.setProperty('--week-height', weekHeight + 'px');
+
+            // Apply horizontal zoom (days visible)
+            const weekRows = document.querySelectorAll('.week-row');
+            weekRows.forEach(row => {
+                row.classList.remove('zoom-5', 'zoom-3');
+                if (daysZoom === 5) row.classList.add('zoom-5');
+                else if (daysZoom === 3) row.classList.add('zoom-3');
+            });
+
+            // Update day headers
+            const dayHeaders = document.querySelectorAll('.day-header');
+            dayHeaders.forEach((header, i) => {
+                if (daysZoom === 5) {
+                    header.style.display = i < 5 ? 'block' : 'none';
+                } else if (daysZoom === 3) {
+                    header.style.display = i < 3 ? 'block' : 'none';
+                } else {
+                    header.style.display = 'block';
+                }
+            });
+        }
+
+        function handlePinchStart(e) {
+            if (e.touches.length === 2) {
+                isPinching = true;
+                pinchStartDistance = getDistance(e.touches[0], e.touches[1]);
+                pinchStartAngle = getAngle(e.touches[0], e.touches[1]);
+                pinchStartHeight = weekHeight;
+                pinchStartDaysZoom = daysZoom;
+                e.preventDefault();
+            }
+        }
+
+        function handlePinchMove(e) {
+            if (!isPinching || e.touches.length !== 2) return;
+            e.preventDefault();
+
+            const currentDistance = getDistance(e.touches[0], e.touches[1]);
+            const currentAngle = getAngle(e.touches[0], e.touches[1]);
+
+            // Calculate scale ratio
+            const ratio = currentDistance / pinchStartDistance;
+
+            // Determine if gesture is more vertical or horizontal
+            const absAngle = Math.abs(currentAngle);
+
+            // Horizontal pinch (angle close to 0 or 180) - change days visible
+            if (absAngle < 45 || absAngle > 135) {
+                if (ratio < 0.7 && pinchStartDaysZoom === 7) {
+                    daysZoom = 5;
+                } else if (ratio < 0.5 && pinchStartDaysZoom >= 5) {
+                    daysZoom = 3;
+                } else if (ratio > 1.3 && pinchStartDaysZoom === 3) {
+                    daysZoom = 5;
+                } else if (ratio > 1.5 && pinchStartDaysZoom <= 5) {
+                    daysZoom = 7;
+                }
+            }
+            // Vertical pinch (angle close to 90) - change week height
+            else {
+                weekHeight = Math.max(40, Math.min(160, pinchStartHeight * ratio));
+            }
+
+            applyZoom();
+        }
+
+        function handlePinchEnd(e) {
+            if (e.touches.length < 2) {
+                isPinching = false;
+            }
+        }
+
+        // Add pinch listeners to calendar views
+        ['month-view', 'scroll-view'].forEach(id => {
+            const el = document.getElementById(id);
+            el.addEventListener('touchstart', handlePinchStart, { passive: false });
+            el.addEventListener('touchmove', handlePinchMove, { passive: false });
+            el.addEventListener('touchend', handlePinchEnd);
+        });
 
         // ===== EVENT LISTENERS =====
         document.getElementById('today-btn').onclick = () => {
