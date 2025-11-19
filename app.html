@@ -9,9 +9,7 @@
     <meta name="theme-color" content="#1a73e8">
     <title>HABIT Calendar</title>
     <style>
-        /* Reset & Base */
         * { margin: 0; padding: 0; box-sizing: border-box; }
-
         :root {
             --primary: #1a73e8;
             --bg: #fff;
@@ -20,7 +18,6 @@
             --text2: #70757a;
             --border: #dadce0;
         }
-
         html, body {
             height: 100%;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -30,15 +27,11 @@
             overflow: hidden;
             -webkit-tap-highlight-color: transparent;
         }
+        body { display: flex; flex-direction: column; }
 
-        body {
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* Header */
+        /* Header - thin line */
         #header {
-            height: 56px;
+            height: 40px;
             background: var(--bg);
             border-bottom: 1px solid var(--border);
             display: flex;
@@ -47,89 +40,117 @@
             gap: 8px;
             flex-shrink: 0;
         }
-
         #header h1 {
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 400;
             flex: 1;
         }
-
         #header button {
             background: none;
-            border: 1px solid var(--border);
-            border-radius: 4px;
-            padding: 6px 12px;
+            border: none;
+            padding: 4px 8px;
             font-size: 14px;
             color: var(--text);
             cursor: pointer;
         }
-
-        #header button:active {
-            background: var(--bg2);
+        #header button:active { background: var(--bg2); border-radius: 4px; }
+        #view-toggle {
+            border: 1px solid var(--border) !important;
+            border-radius: 4px !important;
+            font-size: 12px !important;
         }
 
-        .nav-btn {
-            border: none !important;
-            padding: 6px 10px !important;
-            font-size: 18px !important;
-        }
-
-        #settings-btn {
-            border: none !important;
-            font-size: 18px !important;
-        }
-
-        /* Main */
+        /* Main layout */
         #main {
             flex: 1;
             display: flex;
-            flex-direction: column;
             overflow: hidden;
         }
 
-        /* Calendar */
-        #calendar {
+        /* Sidebar for filters */
+        #sidebar {
+            width: 50px;
+            border-right: 1px solid var(--border);
+            padding: 8px 4px;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+        .filter-item {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 6px;
+            cursor: pointer;
+        }
+        .filter-item input { width: 14px; height: 14px; }
+        .color-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+            margin-left: 4px;
+        }
+
+        /* Content area */
+        #content {
             flex: 1;
             display: flex;
             flex-direction: column;
             overflow: hidden;
         }
 
-        /* Day Headers */
+        /* Calendar container */
+        #calendar-wrap {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Day headers */
         .day-headers {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
             border-bottom: 1px solid var(--border);
             background: var(--bg);
+            flex-shrink: 0;
         }
-
         .day-header {
-            padding: 8px 0;
+            padding: 6px 0;
             text-align: center;
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 500;
             color: var(--text2);
             text-transform: uppercase;
         }
 
-        /* Calendar Grid */
-        #calendar-grid {
+        /* Month view grid */
+        #month-view {
             flex: 1;
             display: grid;
             grid-template-rows: repeat(6, 1fr);
         }
 
-        .calendar-row {
+        /* Scroll view - scrollable weeks */
+        #scroll-view {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+        }
+        #scroll-view .week-row {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            min-height: 80px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        /* Shared day cell styles */
+        .week-row {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
             border-bottom: 1px solid var(--border);
         }
-
-        .calendar-row:last-child {
-            border-bottom: none;
-        }
-
-        /* Day Cell */
+        .week-row:last-child { border-bottom: none; }
         .day-cell {
             border-right: 1px solid var(--border);
             padding: 2px;
@@ -138,42 +159,25 @@
             overflow: hidden;
             min-height: 0;
         }
-
-        .day-cell:last-child {
-            border-right: none;
-        }
-
-        .day-cell:active {
-            background: var(--bg2);
-        }
-
-        .day-cell.other-month {
-            background: var(--bg2);
-        }
-
-        .day-cell.other-month .day-num {
-            color: var(--text2);
-        }
-
-        /* Day Number */
+        .day-cell:last-child { border-right: none; }
+        .day-cell:active { background: var(--bg2); }
+        .day-cell.other-month { background: var(--bg2); }
+        .day-cell.other-month .day-num { color: var(--text2); }
         .day-num {
-            width: 24px;
-            height: 24px;
+            width: 20px;
+            height: 20px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 12px;
+            font-size: 11px;
             border-radius: 50%;
             margin-bottom: 2px;
         }
-
         .day-cell.today .day-num {
             background: var(--primary);
             color: #fff;
             font-weight: 500;
         }
-
-        /* Events in Day */
         .day-events {
             flex: 1;
             display: flex;
@@ -181,12 +185,11 @@
             gap: 1px;
             overflow: hidden;
         }
-
         .event-bar {
-            height: 14px;
+            height: 12px;
             border-radius: 2px;
-            padding: 0 3px;
-            font-size: 9px;
+            padding: 0 2px;
+            font-size: 8px;
             color: #fff;
             display: flex;
             align-items: center;
@@ -194,17 +197,15 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
-
         .event-bar.continuous {
             background: transparent !important;
             border: 1px solid;
             color: var(--text);
         }
-
         .event-more {
-            font-size: 9px;
+            font-size: 8px;
             color: var(--text2);
-            padding: 1px 3px;
+            padding: 1px 2px;
         }
 
         /* Divider */
@@ -215,99 +216,79 @@
             position: relative;
             flex-shrink: 0;
         }
-
         #divider-handle {
             position: absolute;
             left: 50%;
             top: 50%;
             transform: translate(-50%, -50%);
-            width: 32px;
+            width: 24px;
             height: 4px;
             background: var(--text2);
             border-radius: 2px;
         }
 
-        /* Task Panel */
+        /* Task panel */
         #task-panel {
             height: 25vh;
-            min-height: 80px;
+            min-height: 60px;
             background: var(--bg);
             border-top: 1px solid var(--border);
             overflow-y: auto;
             padding: 8px;
             flex-shrink: 0;
         }
-
         #task-panel h2 {
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 500;
             color: var(--text2);
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             text-transform: uppercase;
         }
-
         #task-list {
             display: flex;
             flex-direction: column;
-            gap: 6px;
+            gap: 4px;
         }
-
         .task-item {
             display: flex;
             align-items: center;
-            gap: 8px;
-            padding: 8px;
+            gap: 6px;
+            padding: 6px;
             background: var(--bg2);
             border-radius: 4px;
             border-left: 3px solid;
         }
-
-        .task-item input[type="checkbox"] {
-            width: 16px;
-            height: 16px;
-        }
-
-        .task-info {
-            flex: 1;
-            min-width: 0;
-        }
-
+        .task-item input[type="checkbox"] { width: 14px; height: 14px; }
+        .task-info { flex: 1; min-width: 0; }
         .task-title {
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 500;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
+        .task-meta { font-size: 10px; color: var(--text2); }
 
-        .task-meta {
-            font-size: 11px;
-            color: var(--text2);
-        }
-
-        /* FAB */
+        /* FAB - 1cm from edges */
         #fab {
             position: fixed;
-            bottom: 16px;
-            right: 16px;
-            width: 56px;
-            height: 56px;
+            bottom: 1cm;
+            right: 1cm;
+            width: 1cm;
+            height: 1cm;
             border-radius: 50%;
             background: var(--primary);
             color: #fff;
             border: none;
-            font-size: 28px;
+            font-size: 20px;
             cursor: pointer;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
             z-index: 1000;
             display: flex;
             align-items: center;
             justify-content: center;
         }
-
-        #fab:active {
-            transform: scale(0.95);
-        }
+        #fab:active { transform: scale(0.95); }
 
         /* Modals */
         .modal {
@@ -318,247 +299,153 @@
             z-index: 2000;
             align-items: center;
             justify-content: center;
-            padding: 16px;
+            padding: 12px;
         }
-
-        .modal.active {
-            display: flex;
-        }
-
+        .modal.active { display: flex; }
         .modal-content {
             background: var(--bg);
             border-radius: 8px;
             width: 100%;
-            max-width: 400px;
+            max-width: 360px;
             max-height: 90vh;
             overflow-y: auto;
         }
-
         .modal-header {
-            padding: 16px;
+            padding: 12px;
             border-bottom: 1px solid var(--border);
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-
-        .modal-header h2 {
-            font-size: 18px;
-            font-weight: 500;
-        }
-
+        .modal-header h2 { font-size: 16px; font-weight: 500; }
         .close-btn {
             background: none;
             border: none;
-            font-size: 24px;
+            font-size: 20px;
             color: var(--text2);
             cursor: pointer;
             padding: 0;
         }
-
-        .modal-body {
-            padding: 16px;
-        }
-
-        /* Forms */
-        .form-group {
-            margin-bottom: 16px;
-        }
-
+        .modal-body { padding: 12px; }
+        .form-group { margin-bottom: 12px; }
         .form-group label {
             display: block;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 500;
             color: var(--text2);
-            margin-bottom: 6px;
+            margin-bottom: 4px;
         }
-
         .form-group input,
         .form-group select,
         .form-group textarea {
             width: 100%;
-            padding: 10px;
+            padding: 8px;
             border: 1px solid var(--border);
             border-radius: 4px;
-            font-size: 14px;
+            font-size: 13px;
             font-family: inherit;
         }
-
         .form-group input:focus,
         .form-group select:focus,
         .form-group textarea:focus {
             outline: 2px solid var(--primary);
             border-color: transparent;
         }
-
-        .form-row {
-            display: flex;
-            gap: 8px;
-        }
-
-        .form-row > * {
-            flex: 1;
-        }
-
-        .radio-group {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-
+        .form-row { display: flex; gap: 6px; }
+        .form-row > * { flex: 1; }
+        .radio-group { display: flex; gap: 10px; flex-wrap: wrap; }
         .radio-group label {
             display: flex;
             align-items: center;
             gap: 4px;
             font-weight: normal;
             margin: 0;
+            font-size: 12px;
         }
-
         .form-actions {
             display: flex;
-            gap: 8px;
+            gap: 6px;
             justify-content: flex-end;
-            padding: 16px;
+            padding: 12px;
             border-top: 1px solid var(--border);
         }
-
         .btn {
-            padding: 8px 16px;
+            padding: 6px 12px;
             border: none;
             border-radius: 4px;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 500;
             cursor: pointer;
         }
-
-        .btn-primary {
-            background: var(--primary);
-            color: #fff;
-        }
-
-        .btn-secondary {
-            background: transparent;
-            color: var(--primary);
-        }
-
-        .btn-danger {
-            background: #d93025;
-            color: #fff;
-        }
-
-        /* Reminders */
-        #reminders-list {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            margin-bottom: 8px;
-        }
-
-        .reminder-row {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-        }
-
-        .reminder-row input,
-        .reminder-row select {
-            flex: 1;
-            padding: 8px;
-        }
-
-        .reminder-row button {
-            background: none;
-            border: none;
-            color: #d93025;
-            font-size: 18px;
-            cursor: pointer;
-        }
-
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-secondary { background: transparent; color: var(--primary); }
+        .btn-danger { background: #d93025; color: #fff; }
+        #reminders-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 6px; }
+        .reminder-row { display: flex; gap: 6px; align-items: center; }
+        .reminder-row input, .reminder-row select { flex: 1; padding: 6px; font-size: 12px; }
+        .reminder-row button { background: none; border: none; color: #d93025; font-size: 16px; cursor: pointer; }
         .text-btn {
             background: none;
             border: 1px solid var(--border);
-            padding: 6px 12px;
+            padding: 4px 8px;
             border-radius: 4px;
-            font-size: 12px;
+            font-size: 11px;
             color: var(--primary);
             cursor: pointer;
         }
-
-        /* Day Modal Events */
         .day-event-item {
-            padding: 12px;
+            padding: 10px;
             background: var(--bg2);
             border-left: 3px solid;
             border-radius: 4px;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
-
-        .day-event-time {
-            font-size: 11px;
-            color: var(--text2);
-            margin-bottom: 4px;
-        }
-
-        .day-event-title {
-            font-weight: 500;
-        }
-
-        /* Settings */
-        .setting-row {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 12px;
-        }
-
-        .setting-row input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
-        }
-
-        /* Empty state */
-        .empty {
-            text-align: center;
-            color: var(--text2);
-            padding: 20px;
-        }
+        .day-event-time { font-size: 10px; color: var(--text2); margin-bottom: 3px; }
+        .day-event-title { font-weight: 500; font-size: 13px; }
+        .setting-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .setting-row input[type="checkbox"] { width: 16px; height: 16px; }
+        .empty { text-align: center; color: var(--text2); padding: 16px; font-size: 12px; }
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
     <!-- Header -->
     <header id="header">
         <button id="today-btn">Today</button>
-        <button class="nav-btn" id="prev-btn">‹</button>
-        <button class="nav-btn" id="next-btn">›</button>
         <h1 id="month-title">November 2025</h1>
+        <button id="view-toggle">Month</button>
         <button id="settings-btn">⚙</button>
     </header>
 
     <!-- Main -->
     <main id="main">
-        <!-- Calendar -->
-        <div id="calendar">
-            <div class="day-headers">
-                <div class="day-header">Mon</div>
-                <div class="day-header">Tue</div>
-                <div class="day-header">Wed</div>
-                <div class="day-header">Thu</div>
-                <div class="day-header">Fri</div>
-                <div class="day-header">Sat</div>
-                <div class="day-header">Sun</div>
+        <!-- Sidebar filters -->
+        <aside id="sidebar"></aside>
+
+        <!-- Content -->
+        <div id="content">
+            <div id="calendar-wrap">
+                <div class="day-headers">
+                    <div class="day-header">Mon</div>
+                    <div class="day-header">Tue</div>
+                    <div class="day-header">Wed</div>
+                    <div class="day-header">Thu</div>
+                    <div class="day-header">Fri</div>
+                    <div class="day-header">Sat</div>
+                    <div class="day-header">Sun</div>
+                </div>
+                <!-- Month view (default) -->
+                <div id="month-view"></div>
+                <!-- Scroll view (infinite weeks) -->
+                <div id="scroll-view" class="hidden"></div>
             </div>
-            <div id="calendar-grid"></div>
-        </div>
 
-        <!-- Divider -->
-        <div id="divider">
-            <div id="divider-handle"></div>
-        </div>
+            <div id="divider"><div id="divider-handle"></div></div>
 
-        <!-- Task Panel -->
-        <div id="task-panel">
-            <h2>Tasks</h2>
-            <div id="task-list"></div>
+            <div id="task-panel">
+                <h2>Tasks</h2>
+                <div id="task-list"></div>
+            </div>
         </div>
     </main>
 
@@ -581,7 +468,7 @@
                     <label>Calendar</label>
                     <div class="form-row">
                         <select id="task-color"></select>
-                        <button type="button" class="text-btn" id="new-color-btn">+ New</button>
+                        <button type="button" class="text-btn" id="new-color-btn">+</button>
                     </div>
                 </div>
                 <div class="form-group">
@@ -595,7 +482,7 @@
                 <div class="form-group" id="date-group">
                     <label>Start</label>
                     <input type="datetime-local" id="task-start">
-                    <label style="margin-top:8px">End</label>
+                    <label style="margin-top:6px">End</label>
                     <input type="datetime-local" id="task-end">
                 </div>
                 <div class="form-group" id="reminder-type-group" style="display:none">
@@ -609,7 +496,7 @@
                 <div class="form-group">
                     <label>Reminders</label>
                     <div id="reminders-list"></div>
-                    <button type="button" class="text-btn" id="add-reminder-btn">+ Add reminder</button>
+                    <button type="button" class="text-btn" id="add-reminder-btn">+ Add</button>
                 </div>
                 <div class="form-group">
                     <label>Description</label>
@@ -670,35 +557,21 @@
                     <input type="checkbox" id="notif-toggle">
                     <span>Enable notifications</span>
                 </div>
-                <button class="btn btn-secondary" id="export-btn" style="margin-right:8px">Export</button>
+                <button class="btn btn-secondary" id="export-btn" style="margin-right:6px">Export</button>
                 <button class="btn btn-secondary" id="import-btn">Import</button>
                 <input type="file" id="import-file" accept=".json" hidden>
                 <br><br>
-                <button class="btn btn-danger" id="clear-btn">Clear all data</button>
+                <button class="btn btn-danger" id="clear-btn">Clear all</button>
             </div>
         </div>
     </div>
 
     <script>
         // ===== STORAGE =====
-        const KEYS = {
-            TASKS: 'habit_tasks',
-            COLORS: 'habit_colors',
-            SETTINGS: 'habit_settings'
-        };
-
-        function genId() {
-            return Date.now().toString(36) + Math.random().toString(36).substr(2);
-        }
-
-        function getTasks() {
-            return JSON.parse(localStorage.getItem(KEYS.TASKS) || '[]');
-        }
-
-        function saveTasks(tasks) {
-            localStorage.setItem(KEYS.TASKS, JSON.stringify(tasks));
-        }
-
+        const KEYS = { TASKS: 'habit_tasks', COLORS: 'habit_colors', SETTINGS: 'habit_settings' };
+        function genId() { return Date.now().toString(36) + Math.random().toString(36).substr(2); }
+        function getTasks() { return JSON.parse(localStorage.getItem(KEYS.TASKS) || '[]'); }
+        function saveTasks(tasks) { localStorage.setItem(KEYS.TASKS, JSON.stringify(tasks)); }
         function getColors() {
             let colors = JSON.parse(localStorage.getItem(KEYS.COLORS) || '[]');
             if (!colors.length) {
@@ -711,131 +584,204 @@
             }
             return colors;
         }
+        function saveColors(colors) { localStorage.setItem(KEYS.COLORS, JSON.stringify(colors)); }
+        function getSettings() { return JSON.parse(localStorage.getItem(KEYS.SETTINGS) || '{"notifications":false}'); }
+        function saveSettings(settings) { localStorage.setItem(KEYS.SETTINGS, JSON.stringify(settings)); }
 
-        function saveColors(colors) {
-            localStorage.setItem(KEYS.COLORS, JSON.stringify(colors));
-        }
-
-        function getSettings() {
-            return JSON.parse(localStorage.getItem(KEYS.SETTINGS) || '{"notifications":false}');
-        }
-
-        function saveSettings(settings) {
-            localStorage.setItem(KEYS.SETTINGS, JSON.stringify(settings));
-        }
-
-        // ===== APP STATE =====
+        // ===== STATE =====
         let currentYear = new Date().getFullYear();
         let currentMonth = new Date().getMonth();
+        let currentView = 'month'; // 'month' or 'scroll'
         let editingTaskId = null;
+        let visibleFilters = null; // null = all visible
+
+        // ===== FILTERS =====
+        function renderFilters() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.innerHTML = '';
+            const colors = getColors();
+            colors.forEach(c => {
+                const item = document.createElement('div');
+                item.className = 'filter-item';
+                const cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.checked = true;
+                cb.onchange = () => renderAll();
+                const dot = document.createElement('div');
+                dot.className = 'color-dot';
+                dot.style.background = c.color;
+                item.appendChild(cb);
+                item.appendChild(dot);
+                item.dataset.colorId = c.id;
+                sidebar.appendChild(item);
+            });
+        }
+
+        function getVisibleColorIds() {
+            const items = document.querySelectorAll('#sidebar .filter-item');
+            const ids = [];
+            items.forEach(item => {
+                if (item.querySelector('input').checked) {
+                    ids.push(item.dataset.colorId);
+                }
+            });
+            return ids;
+        }
 
         // ===== CALENDAR RENDERING =====
-        function renderCalendar() {
+        function renderAll() {
+            if (currentView === 'month') {
+                renderMonthView();
+            } else {
+                renderScrollView();
+            }
+            renderTaskList();
+            updateHeader();
+        }
+
+        function updateHeader() {
             const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
             document.getElementById('month-title').textContent = `${months[currentMonth]} ${currentYear}`;
+        }
 
-            const grid = document.getElementById('calendar-grid');
+        function renderMonthView() {
+            const grid = document.getElementById('month-view');
             grid.innerHTML = '';
 
-            // Get first day of month
             const firstDay = new Date(currentYear, currentMonth, 1);
-            const startOffset = (firstDay.getDay() + 6) % 7; // Monday = 0
-
-            // Start date
+            const startOffset = (firstDay.getDay() + 6) % 7;
             const startDate = new Date(firstDay);
             startDate.setDate(startDate.getDate() - startOffset);
 
             const today = new Date();
             const tasks = getTasks();
             const colors = getColors();
+            const visibleIds = getVisibleColorIds();
 
-            // 6 weeks
             for (let week = 0; week < 6; week++) {
                 const row = document.createElement('div');
-                row.className = 'calendar-row';
+                row.className = 'week-row';
 
                 for (let day = 0; day < 7; day++) {
                     const date = new Date(startDate);
                     date.setDate(startDate.getDate() + (week * 7) + day);
-
-                    const cell = document.createElement('div');
-                    cell.className = 'day-cell';
-
-                    if (date.getMonth() !== currentMonth) {
-                        cell.classList.add('other-month');
-                    }
-
-                    if (date.toDateString() === today.toDateString()) {
-                        cell.classList.add('today');
-                    }
-
-                    // Day number
-                    const num = document.createElement('div');
-                    num.className = 'day-num';
-                    num.textContent = date.getDate();
-                    cell.appendChild(num);
-
-                    // Events
-                    const events = document.createElement('div');
-                    events.className = 'day-events';
-
-                    const dayTasks = getTasksForDate(tasks, date);
-                    const maxShow = 2;
-
-                    dayTasks.slice(0, maxShow).forEach(task => {
-                        const bar = document.createElement('div');
-                        bar.className = 'event-bar';
-                        const color = colors.find(c => c.id === task.colorGroupId);
-
-                        if (task.type === 'continuous') {
-                            bar.classList.add('continuous');
-                            bar.style.borderColor = color ? color.color : '#999';
-                        } else {
-                            bar.style.backgroundColor = color ? color.color : '#999';
-                        }
-
-                        let title = task.title;
-                        if (task.type === 'dynamic' && task.postponeCount > 0) {
-                            title += ` (+${task.postponeCount}d)`;
-                        }
-                        bar.textContent = title;
-                        bar.onclick = (e) => {
-                            e.stopPropagation();
-                            showTaskModal(task);
-                        };
-                        events.appendChild(bar);
-                    });
-
-                    if (dayTasks.length > maxShow) {
-                        const more = document.createElement('div');
-                        more.className = 'event-more';
-                        more.textContent = `+${dayTasks.length - maxShow} more`;
-                        events.appendChild(more);
-                    }
-
-                    cell.appendChild(events);
-
-                    // Click to show day
-                    cell.onclick = () => showDayModal(date);
-
+                    const cell = createDayCell(date, today, tasks, colors, visibleIds, currentMonth);
                     row.appendChild(cell);
                 }
-
                 grid.appendChild(row);
             }
+        }
+
+        function renderScrollView() {
+            const container = document.getElementById('scroll-view');
+            container.innerHTML = '';
+
+            // Start from 4 weeks before today
+            const today = new Date();
+            const startDate = new Date(today);
+            startDate.setDate(startDate.getDate() - (startDate.getDay() + 6) % 7 - 28);
+
+            const tasks = getTasks();
+            const colors = getColors();
+            const visibleIds = getVisibleColorIds();
+
+            // Render 20 weeks (can scroll)
+            for (let week = 0; week < 20; week++) {
+                const row = document.createElement('div');
+                row.className = 'week-row';
+
+                for (let day = 0; day < 7; day++) {
+                    const date = new Date(startDate);
+                    date.setDate(startDate.getDate() + (week * 7) + day);
+                    const cell = createDayCell(date, today, tasks, colors, visibleIds, null);
+                    row.appendChild(cell);
+                }
+                container.appendChild(row);
+            }
+
+            // Scroll to show current week in middle
+            setTimeout(() => {
+                const weekHeight = container.firstChild ? container.firstChild.offsetHeight : 80;
+                container.scrollTop = weekHeight * 4; // 4 weeks from start
+            }, 10);
+
+            // Update header on scroll
+            container.onscroll = () => {
+                const weekHeight = container.firstChild ? container.firstChild.offsetHeight : 80;
+                const scrolledWeeks = Math.floor(container.scrollTop / weekHeight);
+                const visibleDate = new Date(startDate);
+                visibleDate.setDate(visibleDate.getDate() + scrolledWeeks * 7);
+                currentMonth = visibleDate.getMonth();
+                currentYear = visibleDate.getFullYear();
+                updateHeader();
+            };
+        }
+
+        function createDayCell(date, today, tasks, colors, visibleIds, currentMonthForGray) {
+            const cell = document.createElement('div');
+            cell.className = 'day-cell';
+
+            if (currentMonthForGray !== null && date.getMonth() !== currentMonthForGray) {
+                cell.classList.add('other-month');
+            }
+
+            if (date.toDateString() === today.toDateString()) {
+                cell.classList.add('today');
+            }
+
+            const num = document.createElement('div');
+            num.className = 'day-num';
+            num.textContent = date.getDate();
+            cell.appendChild(num);
+
+            const events = document.createElement('div');
+            events.className = 'day-events';
+
+            const dayTasks = getTasksForDate(tasks, date).filter(t => visibleIds.includes(t.colorGroupId));
+            const maxShow = 2;
+
+            dayTasks.slice(0, maxShow).forEach(task => {
+                const bar = document.createElement('div');
+                bar.className = 'event-bar';
+                const color = colors.find(c => c.id === task.colorGroupId);
+
+                if (task.type === 'continuous') {
+                    bar.classList.add('continuous');
+                    bar.style.borderColor = color ? color.color : '#999';
+                } else {
+                    bar.style.backgroundColor = color ? color.color : '#999';
+                }
+
+                let title = task.title;
+                if (task.type === 'dynamic' && task.postponeCount > 0) {
+                    title += ` (+${task.postponeCount}d)`;
+                }
+                bar.textContent = title;
+                bar.onclick = (e) => { e.stopPropagation(); showTaskModal(task); };
+                events.appendChild(bar);
+            });
+
+            if (dayTasks.length > maxShow) {
+                const more = document.createElement('div');
+                more.className = 'event-more';
+                more.textContent = `+${dayTasks.length - maxShow}`;
+                events.appendChild(more);
+            }
+
+            cell.appendChild(events);
+            cell.onclick = () => showDayModal(date);
+            return cell;
         }
 
         function getTasksForDate(tasks, date) {
             const dateStr = formatDate(date);
             return tasks.filter(task => {
                 if (task.completed && task.type !== 'continuous') return false;
-
                 if (task.type === 'continuous') {
                     const created = new Date(task.createdAt);
                     const completed = task.completedAt ? new Date(task.completedAt) : null;
                     return created <= date && (!completed || completed >= date);
                 }
-
                 const start = task.startDate ? formatDate(new Date(task.startDate)) : formatDate(new Date(task.dueDate));
                 const end = formatDate(new Date(task.dueDate));
                 return dateStr >= start && dateStr <= end;
@@ -853,20 +799,28 @@
 
             const tasks = getTasks().filter(t => !t.completed || t.type === 'continuous');
             const colors = getColors();
+            const visibleIds = getVisibleColorIds();
 
-            // Sort by due date
-            tasks.sort((a, b) => {
+            const filtered = tasks.filter(t => visibleIds.includes(t.colorGroupId));
+
+            // Sort by frequency then due date
+            filtered.sort((a, b) => {
+                const aColor = colors.find(c => c.id === a.colorGroupId);
+                const bColor = colors.find(c => c.id === b.colorGroupId);
+                const aCount = aColor ? aColor.count : 0;
+                const bCount = bColor ? bColor.count : 0;
+                if (bCount !== aCount) return bCount - aCount;
                 if (!a.dueDate) return 1;
                 if (!b.dueDate) return -1;
                 return new Date(a.dueDate) - new Date(b.dueDate);
             });
 
-            if (!tasks.length) {
+            if (!filtered.length) {
                 list.innerHTML = '<div class="empty">No tasks</div>';
                 return;
             }
 
-            tasks.forEach(task => {
+            filtered.forEach(task => {
                 const item = document.createElement('div');
                 item.className = 'task-item';
                 const color = colors.find(c => c.id === task.colorGroupId);
@@ -910,39 +864,38 @@
                 task.completed = !task.completed;
                 task.completedAt = task.completed ? new Date().toISOString() : null;
                 saveTasks(tasks);
-                renderCalendar();
-                renderTaskList();
+                renderAll();
             }
+        }
+
+        // ===== VIEW TOGGLE =====
+        function toggleView() {
+            if (currentView === 'month') {
+                currentView = 'scroll';
+                document.getElementById('month-view').classList.add('hidden');
+                document.getElementById('scroll-view').classList.remove('hidden');
+                document.getElementById('view-toggle').textContent = 'Scroll';
+            } else {
+                currentView = 'month';
+                document.getElementById('scroll-view').classList.add('hidden');
+                document.getElementById('month-view').classList.remove('hidden');
+                document.getElementById('view-toggle').textContent = 'Month';
+            }
+            renderAll();
         }
 
         // ===== MODALS =====
         function showTaskModal(task = null) {
             editingTaskId = task ? task.id : null;
-
             document.getElementById('task-title').value = task ? task.title : '';
             document.getElementById('task-type').value = task ? task.type : 'fixed';
             document.getElementById('task-desc').value = task ? (task.description || '') : '';
-
-            if (task && task.startDate) {
-                document.getElementById('task-start').value = formatDateTimeLocal(task.startDate);
-            } else {
-                document.getElementById('task-start').value = '';
-            }
-
-            if (task && task.dueDate) {
-                document.getElementById('task-end').value = formatDateTimeLocal(task.dueDate);
-            } else {
-                document.getElementById('task-end').value = '';
-            }
-
+            document.getElementById('task-start').value = task && task.startDate ? formatDateTimeLocal(task.startDate) : '';
+            document.getElementById('task-end').value = task && task.dueDate ? formatDateTimeLocal(task.dueDate) : '';
             updateColorSelect(task ? task.colorGroupId : null);
             updateTypeVisibility();
-
             document.getElementById('reminders-list').innerHTML = '';
-            if (task && task.reminders) {
-                task.reminders.forEach(r => addReminderRow(r));
-            }
-
+            if (task && task.reminders) task.reminders.forEach(r => addReminderRow(r));
             document.getElementById('task-modal').classList.add('active');
         }
 
@@ -952,19 +905,26 @@
         }
 
         function showDayModal(date) {
-            const title = document.getElementById('day-title');
-            title.textContent = date.toLocaleDateString([], {weekday:'long', month:'long', day:'numeric'});
-
+            document.getElementById('day-title').textContent = date.toLocaleDateString([], {weekday:'short', month:'short', day:'numeric'});
             const events = document.getElementById('day-events');
             events.innerHTML = '';
 
             const tasks = getTasksForDate(getTasks(), date);
             const colors = getColors();
+            const visibleIds = getVisibleColorIds();
+            const filtered = tasks.filter(t => visibleIds.includes(t.colorGroupId));
 
-            if (!tasks.length) {
-                events.innerHTML = '<div class="empty">No tasks for this day</div>';
+            // Sort by time
+            filtered.sort((a, b) => {
+                if (!a.dueDate) return 1;
+                if (!b.dueDate) return -1;
+                return new Date(a.dueDate) - new Date(b.dueDate);
+            });
+
+            if (!filtered.length) {
+                events.innerHTML = '<div class="empty">No tasks</div>';
             } else {
-                tasks.forEach(task => {
+                filtered.forEach(task => {
                     const item = document.createElement('div');
                     item.className = 'day-event-item';
                     const color = colors.find(c => c.id === task.colorGroupId);
@@ -981,28 +941,30 @@
                     const titleDiv = document.createElement('div');
                     titleDiv.className = 'day-event-title';
                     titleDiv.textContent = task.title;
+                    if (task.type === 'dynamic' && task.postponeCount > 0) {
+                        titleDiv.textContent += ` (+${task.postponeCount}d)`;
+                    }
                     item.appendChild(titleDiv);
 
                     item.onclick = () => {
                         document.getElementById('day-modal').classList.remove('active');
                         showTaskModal(task);
                     };
-
                     events.appendChild(item);
                 });
             }
-
             document.getElementById('day-modal').classList.add('active');
         }
 
         function updateColorSelect(selectedId) {
             const select = document.getElementById('task-color');
             const colors = getColors();
+            colors.sort((a, b) => (b.count || 0) - (a.count || 0));
             select.innerHTML = '';
             colors.forEach(c => {
                 const opt = document.createElement('option');
                 opt.value = c.id;
-                opt.textContent = c.name;
+                opt.textContent = `${c.name} (${c.count || 0})`;
                 if (c.id === selectedId) opt.selected = true;
                 select.appendChild(opt);
             });
@@ -1010,32 +972,18 @@
 
         function updateTypeVisibility() {
             const type = document.getElementById('task-type').value;
-            const dateGroup = document.getElementById('date-group');
-            const rtGroup = document.getElementById('reminder-type-group');
-
-            if (type === 'continuous') {
-                dateGroup.style.display = 'none';
-                rtGroup.style.display = 'none';
-            } else if (type === 'dynamic') {
-                dateGroup.style.display = 'block';
-                rtGroup.style.display = 'block';
-            } else {
-                dateGroup.style.display = 'block';
-                rtGroup.style.display = 'none';
-            }
+            document.getElementById('date-group').style.display = type === 'continuous' ? 'none' : 'block';
+            document.getElementById('reminder-type-group').style.display = type === 'dynamic' ? 'block' : 'none';
         }
 
         function addReminderRow(reminder = null) {
             const list = document.getElementById('reminders-list');
             const row = document.createElement('div');
             row.className = 'reminder-row';
-
             const input = document.createElement('input');
             input.type = 'number';
             input.min = '1';
             input.value = reminder ? reminder.amount : '10';
-            input.placeholder = 'Amount';
-
             const select = document.createElement('select');
             ['minutes','hours','days','weeks'].forEach(u => {
                 const opt = document.createElement('option');
@@ -1044,11 +992,9 @@
                 if (reminder && reminder.unit === u) opt.selected = true;
                 select.appendChild(opt);
             });
-
             const btn = document.createElement('button');
             btn.textContent = '×';
             btn.onclick = () => row.remove();
-
             row.appendChild(input);
             row.appendChild(select);
             row.appendChild(btn);
@@ -1057,10 +1003,7 @@
 
         function saveTask() {
             const title = document.getElementById('task-title').value.trim();
-            if (!title) {
-                alert('Please enter a title');
-                return;
-            }
+            if (!title) { alert('Please enter a title'); return; }
 
             const type = document.getElementById('task-type').value;
             const colorGroupId = document.getElementById('task-color').value;
@@ -1068,10 +1011,7 @@
 
             const task = {
                 id: editingTaskId || genId(),
-                title,
-                type,
-                colorGroupId,
-                description,
+                title, type, colorGroupId, description,
                 reminders: [],
                 createdAt: editingTaskId ? undefined : new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
@@ -1079,17 +1019,11 @@
             };
 
             if (type !== 'continuous') {
-                const startVal = document.getElementById('task-start').value;
                 const endVal = document.getElementById('task-end').value;
-
-                if (!endVal) {
-                    alert('Please set an end date');
-                    return;
-                }
-
+                if (!endVal) { alert('Please set an end date'); return; }
+                const startVal = document.getElementById('task-start').value;
                 if (startVal) task.startDate = new Date(startVal).toISOString();
                 task.dueDate = new Date(endVal).toISOString();
-
                 if (type === 'dynamic') {
                     const rt = document.querySelector('input[name="rtype"]:checked');
                     task.reminderType = rt ? rt.value : 'M2M';
@@ -1098,13 +1032,10 @@
                 }
             }
 
-            // Get reminders
             document.querySelectorAll('.reminder-row').forEach(row => {
                 const amount = row.querySelector('input').value;
                 const unit = row.querySelector('select').value;
-                if (amount) {
-                    task.reminders.push({ amount, unit });
-                }
+                if (amount) task.reminders.push({ amount, unit });
             });
 
             const tasks = getTasks();
@@ -1116,30 +1047,21 @@
                     tasks[idx] = task;
                 }
             } else {
-                // Update color count
                 const colors = getColors();
                 const color = colors.find(c => c.id === colorGroupId);
-                if (color) {
-                    color.count = (color.count || 0) + 1;
-                    saveColors(colors);
-                }
+                if (color) { color.count = (color.count || 0) + 1; saveColors(colors); }
                 tasks.push(task);
             }
 
             saveTasks(tasks);
             hideTaskModal();
-            renderCalendar();
-            renderTaskList();
+            renderFilters();
+            renderAll();
         }
 
         function formatDateTimeLocal(isoString) {
             const d = new Date(isoString);
-            const year = d.getFullYear();
-            const month = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
-            const hours = String(d.getHours()).padStart(2, '0');
-            const mins = String(d.getMinutes()).padStart(2, '0');
-            return `${year}-${month}-${day}T${hours}:${mins}`;
+            return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}T${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
         }
 
         // ===== COLOR MODAL =====
@@ -1148,55 +1070,31 @@
             document.getElementById('color-value').value = '#1a73e8';
             document.getElementById('color-modal').classList.add('active');
         }
-
-        function hideColorModal() {
-            document.getElementById('color-modal').classList.remove('active');
-        }
-
+        function hideColorModal() { document.getElementById('color-modal').classList.remove('active'); }
         function saveColor() {
             const name = document.getElementById('color-name').value.trim();
-            if (!name) {
-                alert('Please enter a name');
-                return;
-            }
-
+            if (!name) { alert('Please enter a name'); return; }
             const colors = getColors();
-            colors.push({
-                id: genId(),
-                name,
-                color: document.getElementById('color-value').value,
-                count: 0
-            });
+            colors.push({ id: genId(), name, color: document.getElementById('color-value').value, count: 0 });
             saveColors(colors);
             hideColorModal();
+            renderFilters();
             updateColorSelect();
         }
 
         // ===== SETTINGS =====
         function showSettings() {
-            const settings = getSettings();
-            document.getElementById('notif-toggle').checked = settings.notifications;
+            document.getElementById('notif-toggle').checked = getSettings().notifications;
             document.getElementById('settings-modal').classList.add('active');
         }
-
-        function hideSettings() {
-            document.getElementById('settings-modal').classList.remove('active');
-        }
-
         function exportData() {
-            const data = {
-                tasks: getTasks(),
-                colors: getColors(),
-                settings: getSettings()
-            };
+            const data = { tasks: getTasks(), colors: getColors(), settings: getSettings() };
             const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
-            const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.href = url;
+            a.href = URL.createObjectURL(blob);
             a.download = `habit-calendar-${Date.now()}.json`;
             a.click();
         }
-
         function importData(file) {
             const reader = new FileReader();
             reader.onload = (e) => {
@@ -1205,130 +1103,86 @@
                     if (data.tasks) saveTasks(data.tasks);
                     if (data.colors) saveColors(data.colors);
                     if (data.settings) saveSettings(data.settings);
-                    renderCalendar();
-                    renderTaskList();
-                    alert('Data imported!');
-                } catch (err) {
-                    alert('Invalid file');
-                }
+                    renderFilters();
+                    renderAll();
+                    alert('Imported!');
+                } catch (err) { alert('Invalid file'); }
             };
             reader.readAsText(file);
         }
-
         function clearData() {
-            if (confirm('Clear ALL data? This cannot be undone!')) {
-                localStorage.clear();
-                location.reload();
-            }
+            if (confirm('Clear ALL data?')) { localStorage.clear(); location.reload(); }
         }
 
         // ===== DIVIDER DRAG =====
-        let isDragging = false;
-        let startY = 0;
-        let startHeight = 0;
-
+        let isDragging = false, startY = 0, startHeight = 0;
         document.getElementById('divider').addEventListener('touchstart', (e) => {
             isDragging = true;
             startY = e.touches[0].clientY;
             startHeight = document.getElementById('task-panel').offsetHeight;
         });
-
         document.addEventListener('touchmove', (e) => {
             if (!isDragging) return;
             const deltaY = startY - e.touches[0].clientY;
-            const newHeight = Math.max(80, Math.min(window.innerHeight * 0.6, startHeight + deltaY));
-            document.getElementById('task-panel').style.height = newHeight + 'px';
+            document.getElementById('task-panel').style.height = Math.max(60, Math.min(window.innerHeight * 0.6, startHeight + deltaY)) + 'px';
         });
-
-        document.addEventListener('touchend', () => {
-            isDragging = false;
-        });
-
-        // Mouse support
+        document.addEventListener('touchend', () => { isDragging = false; });
         document.getElementById('divider').addEventListener('mousedown', (e) => {
             isDragging = true;
             startY = e.clientY;
             startHeight = document.getElementById('task-panel').offsetHeight;
         });
-
         document.addEventListener('mousemove', (e) => {
             if (!isDragging) return;
             const deltaY = startY - e.clientY;
-            const newHeight = Math.max(80, Math.min(window.innerHeight * 0.6, startHeight + deltaY));
-            document.getElementById('task-panel').style.height = newHeight + 'px';
+            document.getElementById('task-panel').style.height = Math.max(60, Math.min(window.innerHeight * 0.6, startHeight + deltaY)) + 'px';
         });
-
-        document.addEventListener('mouseup', () => {
-            isDragging = false;
-        });
+        document.addEventListener('mouseup', () => { isDragging = false; });
 
         // ===== EVENT LISTENERS =====
         document.getElementById('today-btn').onclick = () => {
             const now = new Date();
             currentYear = now.getFullYear();
             currentMonth = now.getMonth();
-            renderCalendar();
-        };
-
-        document.getElementById('prev-btn').onclick = () => {
-            currentMonth--;
-            if (currentMonth < 0) {
-                currentMonth = 11;
-                currentYear--;
+            renderAll();
+            if (currentView === 'scroll') {
+                const container = document.getElementById('scroll-view');
+                const weekHeight = container.firstChild ? container.firstChild.offsetHeight : 80;
+                container.scrollTop = weekHeight * 4;
             }
-            renderCalendar();
         };
-
-        document.getElementById('next-btn').onclick = () => {
-            currentMonth++;
-            if (currentMonth > 11) {
-                currentMonth = 0;
-                currentYear++;
-            }
-            renderCalendar();
-        };
-
+        document.getElementById('view-toggle').onclick = toggleView;
         document.getElementById('settings-btn').onclick = showSettings;
         document.getElementById('fab').onclick = () => showTaskModal();
         document.getElementById('new-color-btn').onclick = showColorModal;
         document.getElementById('add-reminder-btn').onclick = () => addReminderRow();
         document.getElementById('task-type').onchange = updateTypeVisibility;
-
         document.getElementById('save-btn').onclick = saveTask;
         document.getElementById('cancel-btn').onclick = hideTaskModal;
         document.getElementById('save-color-btn').onclick = saveColor;
         document.getElementById('cancel-color-btn').onclick = hideColorModal;
-
         document.getElementById('export-btn').onclick = exportData;
         document.getElementById('import-btn').onclick = () => document.getElementById('import-file').click();
-        document.getElementById('import-file').onchange = (e) => {
-            if (e.target.files[0]) importData(e.target.files[0]);
-        };
+        document.getElementById('import-file').onchange = (e) => { if (e.target.files[0]) importData(e.target.files[0]); };
         document.getElementById('clear-btn').onclick = clearData;
-
         document.getElementById('notif-toggle').onchange = (e) => {
             const settings = getSettings();
             settings.notifications = e.target.checked;
             saveSettings(settings);
-            if (e.target.checked && 'Notification' in window) {
-                Notification.requestPermission();
-            }
+            if (e.target.checked && 'Notification' in window) Notification.requestPermission();
         };
 
         // Close modals
         document.querySelectorAll('.close-btn').forEach(btn => {
             btn.onclick = () => btn.closest('.modal').classList.remove('active');
         });
-
         document.querySelectorAll('.modal').forEach(modal => {
-            modal.onclick = (e) => {
-                if (e.target === modal) modal.classList.remove('active');
-            };
+            modal.onclick = (e) => { if (e.target === modal) modal.classList.remove('active'); };
         });
 
         // ===== INIT =====
-        renderCalendar();
-        renderTaskList();
+        renderFilters();
+        renderAll();
     </script>
 </body>
 </html>
