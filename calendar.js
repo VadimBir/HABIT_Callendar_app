@@ -7,7 +7,7 @@ class CalendarManager {
         this.currentDate = new Date();
         this.currentMonth = this.currentDate.getMonth();
         this.currentYear = this.currentDate.getFullYear();
-        this.weeksToShow = 8; // Show 8 weeks by default
+        this.weeksToShow = 6; // Standard month view (6 weeks)
         this.zoomLevel = 1.0;
 
         this.initializeEventListeners();
@@ -25,6 +25,27 @@ class CalendarManager {
         document.getElementById('next-month').addEventListener('click', () => {
             this.changeMonth(1);
         });
+
+        // Today button
+        document.getElementById('today-btn').addEventListener('click', () => {
+            this.goToToday();
+        });
+
+        // Menu toggle (mobile)
+        document.getElementById('menu-toggle').addEventListener('click', () => {
+            const sidebar = document.getElementById('filter-sidebar');
+            sidebar.classList.toggle('open');
+        });
+    }
+
+    /**
+     * Go to today's date
+     */
+    goToToday() {
+        const today = new Date();
+        this.currentMonth = today.getMonth();
+        this.currentYear = today.getFullYear();
+        this.render();
     }
 
     /**
@@ -338,7 +359,7 @@ class CalendarManager {
         checkbox.className = 'task-checkbox';
         checkbox.addEventListener('change', () => {
             taskManager.toggleTaskCompletion(task.id);
-            modal.classList.remove('active');
+            document.getElementById('day-modal').classList.remove('active');
         });
 
         item.insertBefore(checkbox, item.firstChild);
