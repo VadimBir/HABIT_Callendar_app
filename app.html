@@ -459,13 +459,79 @@
         .setting-row input[type="checkbox"] { width: 16px; height: 16px; }
         .empty { text-align: center; color: var(--text2); padding: 16px; font-size: 12px; }
         .hidden { display: none !important; }
+
+        /* Linear view */
+        #linear-view {
+            flex: 1;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+            display: flex;
+            flex-direction: column;
+        }
+        .linear-header {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            min-width: fit-content;
+        }
+        .linear-day-header {
+            min-width: 80px;
+            padding: 4px;
+            text-align: center;
+            font-size: 10px;
+            color: var(--text2);
+            border-right: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+        .linear-day-header.today {
+            background: var(--primary);
+            color: #fff;
+        }
+        .linear-tracks {
+            flex: 1;
+            position: relative;
+            min-width: fit-content;
+        }
+        .linear-track {
+            height: 24px;
+            position: relative;
+            border-bottom: 1px solid var(--border);
+        }
+        .linear-task {
+            position: absolute;
+            height: 20px;
+            top: 2px;
+            border-radius: 3px;
+            font-size: 9px;
+            color: #fff;
+            padding: 0 4px;
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+            overflow: hidden;
+            cursor: pointer;
+        }
+        .linear-task.continuous {
+            background: transparent !important;
+            border: 2px solid;
+            color: var(--text);
+        }
+        .linear-day-grid {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            border-right: 1px solid var(--border);
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
     <!-- Header -->
     <header id="header">
         <button id="today-btn">Today</button>
+        <button id="prev-btn">&lt;</button>
         <h1 id="month-title">November 2025</h1>
+        <button id="next-btn">&gt;</button>
         <button id="view-toggle">Month</button>
         <button id="settings-btn">⚙</button>
     </header>
@@ -491,6 +557,8 @@
                 <div id="month-view"></div>
                 <!-- Scroll view (infinite weeks) -->
                 <div id="scroll-view" class="hidden"></div>
+                <!-- Linear view (timeline) -->
+                <div id="linear-view" class="hidden"></div>
             </div>
 
             <div id="divider"><div id="divider-handle"></div></div>
@@ -644,9 +712,12 @@
         // ===== STATE =====
         let currentYear = new Date().getFullYear();
         let currentMonth = new Date().getMonth();
-        let currentView = 'month'; // 'month' or 'scroll'
+        let currentDay = new Date().getDate();
+        let currentView = 'month'; // 'month', 'scroll', or 'linear'
         let editingTaskId = null;
         let visibleFilters = null; // null = all visible
+        let linearDayWidth = 80; // Width of each day in linear view
+        let linearDaysVisible = 14; // Number of days to show in linear view
 
         // ===== FILTERS =====
         function renderFilters() {
@@ -685,8 +756,10 @@
         function renderAll() {
             if (currentView === 'month') {
                 renderMonthView();
-            } else {
+            } else if (currentView === 'scroll') {
                 renderScrollView();
+            } else {
+                renderLinearView();
             }
             renderTaskList();
             updateHeader();
@@ -758,7 +831,7 @@
                 container.scrollTop = weekHeight * 4; // 4 weeks from start
             }, 10);
 
-            // Update header on scroll
+            // Update header on scroll and load more content
             container.onscroll = () => {
                 const weekHeight = container.firstChild ? container.firstChild.offsetHeight : 80;
                 const scrolledWeeks = Math.floor(container.scrollTop / weekHeight);
@@ -767,7 +840,149 @@
                 currentMonth = visibleDate.getMonth();
                 currentYear = visibleDate.getFullYear();
                 updateHeader();
+
+                // Infinite scroll - load more weeks when near bottom
+                if (container.scrollTop + container.clientHeight >= container.scrollHeight - 100) {
+                    const lastWeekStart = new Date(startDate);
+                    lastWeekStart.setDate(lastWeekStart.getDate() + container.children.length * 7);
+                    for (let week = 0; week < 10; week++) {
+                        const row = document.createElement('div');
+                        row.className = 'week-row';
+                        for (let day = 0; day < 7; day++) {
+                            const date = new Date(lastWeekStart);
+                            date.setDate(lastWeekStart.getDate() + (week * 7) + day);
+                            const cell = createDayCell(date, today, tasks, colors, visibleIds, null);
+                            row.appendChild(cell);
+                        }
+                        container.appendChild(row);
+                    }
+                }
             };
+        }
+
+        function renderLinearView() {
+            const container = document.getElementById('linear-view');
+            container.innerHTML = '';
+
+            const today = new Date();
+            const startDate = new Date(currentYear, currentMonth, currentDay);
+            startDate.setDate(startDate.getDate() - 3); // Start 3 days before current
+
+            const tasks = getTasks();
+            const colors = getColors();
+            const visibleIds = getVisibleColorIds();
+
+            // Create day headers
+            const header = document.createElement('div');
+            header.className = 'linear-header';
+            for (let i = 0; i < linearDaysVisible; i++) {
+                const date = new Date(startDate);
+                date.setDate(startDate.getDate() + i);
+                const dayHeader = document.createElement('div');
+                dayHeader.className = 'linear-day-header';
+                if (date.toDateString() === today.toDateString()) {
+                    dayHeader.classList.add('today');
+                }
+                dayHeader.style.minWidth = linearDayWidth + 'px';
+                dayHeader.innerHTML = `${date.getDate()}<br>${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][date.getDay()]}`;
+                header.appendChild(dayHeader);
+            }
+            container.appendChild(header);
+
+            // Get tasks sorted by due date (earliest first = top track)
+            const activeTasks = tasks.filter(t => !t.completed && visibleIds.includes(t.colorGroupId));
+            activeTasks.sort((a, b) => {
+                if (!a.dueDate) return 1;
+                if (!b.dueDate) return -1;
+                return new Date(a.dueDate) - new Date(b.dueDate);
+            });
+
+            // Create tracks container
+            const tracks = document.createElement('div');
+            tracks.className = 'linear-tracks';
+            tracks.style.width = (linearDayWidth * linearDaysVisible) + 'px';
+
+            // Add day grid lines
+            for (let i = 0; i < linearDaysVisible; i++) {
+                const gridLine = document.createElement('div');
+                gridLine.className = 'linear-day-grid';
+                gridLine.style.left = (i * linearDayWidth) + 'px';
+                gridLine.style.width = linearDayWidth + 'px';
+                tracks.appendChild(gridLine);
+            }
+
+            // Create tracks for each task
+            activeTasks.forEach(task => {
+                const track = document.createElement('div');
+                track.className = 'linear-track';
+
+                const color = colors.find(c => c.id === task.colorGroupId);
+                const taskStart = task.startDate ? new Date(task.startDate) : (task.createdAt ? new Date(task.createdAt) : new Date(task.dueDate));
+                const taskEnd = task.dueDate ? new Date(task.dueDate) : new Date();
+
+                // Calculate position within visible range
+                const viewStart = startDate.getTime();
+                const viewEnd = new Date(startDate).setDate(startDate.getDate() + linearDaysVisible);
+
+                // Check if task is visible in current range
+                if (taskEnd.getTime() >= viewStart && taskStart.getTime() <= viewEnd) {
+                    const startOffset = Math.max(0, (taskStart.getTime() - viewStart) / (1000 * 60 * 60 * 24));
+                    const endOffset = Math.min(linearDaysVisible, (taskEnd.getTime() - viewStart) / (1000 * 60 * 60 * 24));
+
+                    const taskEl = document.createElement('div');
+                    taskEl.className = 'linear-task';
+                    if (task.type === 'continuous') {
+                        taskEl.classList.add('continuous');
+                        taskEl.style.borderColor = color ? color.color : '#999';
+                    } else {
+                        taskEl.style.backgroundColor = color ? color.color : '#999';
+                    }
+                    taskEl.style.left = (startOffset * linearDayWidth) + 'px';
+                    taskEl.style.width = Math.max(20, (endOffset - startOffset) * linearDayWidth) + 'px';
+                    taskEl.textContent = task.title;
+                    taskEl.onclick = () => showTaskModal(task);
+                    track.appendChild(taskEl);
+                }
+
+                tracks.appendChild(track);
+            });
+
+            container.appendChild(tracks);
+
+            // Enable horizontal drag scrolling
+            let isDraggingLinear = false;
+            let linearStartX = 0;
+            let linearScrollLeft = 0;
+
+            container.addEventListener('mousedown', (e) => {
+                isDraggingLinear = true;
+                linearStartX = e.pageX - container.offsetLeft;
+                linearScrollLeft = container.scrollLeft;
+            });
+            container.addEventListener('mousemove', (e) => {
+                if (!isDraggingLinear) return;
+                e.preventDefault();
+                const x = e.pageX - container.offsetLeft;
+                const walk = (x - linearStartX);
+                container.scrollLeft = linearScrollLeft - walk;
+            });
+            container.addEventListener('mouseup', () => { isDraggingLinear = false; });
+            container.addEventListener('mouseleave', () => { isDraggingLinear = false; });
+
+            // Touch support
+            container.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1) {
+                    linearStartX = e.touches[0].pageX;
+                    linearScrollLeft = container.scrollLeft;
+                }
+            });
+            container.addEventListener('touchmove', (e) => {
+                if (e.touches.length === 1) {
+                    const x = e.touches[0].pageX;
+                    const walk = (x - linearStartX);
+                    container.scrollLeft = linearScrollLeft - walk;
+                }
+            });
         }
 
         function createDayCell(date, today, tasks, colors, visibleIds, currentMonthForGray) {
@@ -979,16 +1194,59 @@
 
         // ===== VIEW TOGGLE =====
         function toggleView() {
+            document.getElementById('month-view').classList.add('hidden');
+            document.getElementById('scroll-view').classList.add('hidden');
+            document.getElementById('linear-view').classList.add('hidden');
+
             if (currentView === 'month') {
                 currentView = 'scroll';
-                document.getElementById('month-view').classList.add('hidden');
                 document.getElementById('scroll-view').classList.remove('hidden');
                 document.getElementById('view-toggle').textContent = 'Scroll';
+            } else if (currentView === 'scroll') {
+                currentView = 'linear';
+                document.getElementById('linear-view').classList.remove('hidden');
+                document.getElementById('view-toggle').textContent = 'Linear';
+                document.querySelector('.day-headers').classList.add('hidden');
             } else {
                 currentView = 'month';
-                document.getElementById('scroll-view').classList.add('hidden');
                 document.getElementById('month-view').classList.remove('hidden');
                 document.getElementById('view-toggle').textContent = 'Month';
+                document.querySelector('.day-headers').classList.remove('hidden');
+            }
+            renderAll();
+        }
+
+        // ===== NAVIGATION =====
+        function prevMonth() {
+            if (currentView === 'linear') {
+                // Move back 7 days in linear view
+                const d = new Date(currentYear, currentMonth, currentDay - 7);
+                currentYear = d.getFullYear();
+                currentMonth = d.getMonth();
+                currentDay = d.getDate();
+            } else {
+                currentMonth--;
+                if (currentMonth < 0) {
+                    currentMonth = 11;
+                    currentYear--;
+                }
+            }
+            renderAll();
+        }
+
+        function nextMonth() {
+            if (currentView === 'linear') {
+                // Move forward 7 days in linear view
+                const d = new Date(currentYear, currentMonth, currentDay + 7);
+                currentYear = d.getFullYear();
+                currentMonth = d.getMonth();
+                currentDay = d.getDate();
+            } else {
+                currentMonth++;
+                if (currentMonth > 11) {
+                    currentMonth = 0;
+                    currentYear++;
+                }
             }
             renderAll();
         }
@@ -1138,14 +1396,43 @@
                     task.reminderType = rt ? rt.value : 'M2M';
                     task.originalDueDate = task.dueDate;
                     task.postponeCount = 0;
+
+                    // Auto-add reminders based on reminder type
+                    if (task.reminderType === 'D2D') {
+                        task.reminders = [
+                            { amount: '15', unit: 'minutes' },
+                            { amount: '1', unit: 'hours' },
+                            { amount: '2', unit: 'hours' },
+                            { amount: '4', unit: 'hours' }
+                        ];
+                    } else if (task.reminderType === 'W2W') {
+                        task.reminders = [
+                            { amount: '12', unit: 'hours' },
+                            { amount: '1', unit: 'days' },
+                            { amount: '2', unit: 'days' },
+                            { amount: '3', unit: 'days' },
+                            { amount: '5', unit: 'days' }
+                        ];
+                    } else if (task.reminderType === 'M2M') {
+                        task.reminders = [
+                            { amount: '3', unit: 'days' },
+                            { amount: '5', unit: 'days' },
+                            { amount: '1', unit: 'weeks' },
+                            { amount: '2', unit: 'weeks' },
+                            { amount: '3', unit: 'weeks' }
+                        ];
+                    }
                 }
             }
 
-            document.querySelectorAll('.reminder-row').forEach(row => {
-                const amount = row.querySelector('input').value;
-                const unit = row.querySelector('select').value;
-                if (amount) task.reminders.push({ amount, unit });
-            });
+            // Add manual reminders (if not a dynamic task with auto reminders)
+            if (type !== 'dynamic') {
+                document.querySelectorAll('.reminder-row').forEach(row => {
+                    const amount = row.querySelector('input').value;
+                    const unit = row.querySelector('select').value;
+                    if (amount) task.reminders.push({ amount, unit });
+                });
+            }
 
             const tasks = getTasks();
             if (editingTaskId) {
@@ -1356,11 +1643,38 @@
             el.addEventListener('touchend', handlePinchEnd);
         });
 
+        // Linear view pinch zoom (for day width)
+        let linearPinchStart = 0;
+        let linearPinchStartWidth = 80;
+        let linearPinchStartDays = 14;
+        const linearView = document.getElementById('linear-view');
+        linearView.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                linearPinchStart = getDistance(e.touches[0], e.touches[1]);
+                linearPinchStartWidth = linearDayWidth;
+                linearPinchStartDays = linearDaysVisible;
+                e.preventDefault();
+            }
+        }, { passive: false });
+        linearView.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 2) {
+                e.preventDefault();
+                const dist = getDistance(e.touches[0], e.touches[1]);
+                const ratio = dist / linearPinchStart;
+                // Pinch to change day width and days visible
+                linearDayWidth = Math.max(40, Math.min(160, linearPinchStartWidth * ratio));
+                // Inverse relationship - smaller width = more days
+                linearDaysVisible = Math.max(7, Math.min(30, Math.round(linearPinchStartDays / ratio)));
+                renderLinearView();
+            }
+        }, { passive: false });
+
         // ===== EVENT LISTENERS =====
         document.getElementById('today-btn').onclick = () => {
             const now = new Date();
             currentYear = now.getFullYear();
             currentMonth = now.getMonth();
+            currentDay = now.getDate();
             renderAll();
             if (currentView === 'scroll') {
                 const container = document.getElementById('scroll-view');
@@ -1368,6 +1682,8 @@
                 container.scrollTop = weekHeight * 4;
             }
         };
+        document.getElementById('prev-btn').onclick = prevMonth;
+        document.getElementById('next-btn').onclick = nextMonth;
         document.getElementById('view-toggle').onclick = toggleView;
         document.getElementById('settings-btn').onclick = showSettings;
         document.getElementById('fab').onclick = () => showTaskModal();
