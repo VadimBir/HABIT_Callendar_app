@@ -100,22 +100,14 @@ Shows original date and postponement count: `Task Name (+5 days)`
 
 ### Android (APK)
 
-A ready-to-install APK is committed in the repo: **`apk/HABIT-Calendar.apk`**.
+Two APKs are committed in `apk/`:
 
-1. Copy the APK to your phone (or download it from GitHub)
-2. Open it and allow "Install from unknown sources" if prompted
-3. Launch **HABIT Calendar** from your app drawer
+| APK | What it is |
+|---|---|
+| **`apk/Etar-Calendar.apk`** | **Etar** — the top open-source Android calendar (maintained AOSP/Google Calendar fork, GPL-3). Full native calendar: month/week/day/agenda views, recurring events, widgets. Events are stored in Android's **system Calendar Provider**, so they automatically appear in and sync with Samsung Calendar, Google Calendar, Outlook, etc. — no import/export needed. This is the new base app; the HABIT custom features (task types, D2D/W2W/M2M auto-prolong) get layered onto it. Source is vendored in `etar/` — build with `cd etar && ./gradlew assembleDebug`. |
+| `apk/HABIT-Calendar.apk` | The original custom single-file web app (`app.html`) in a WebView wrapper (built from `android/`). Standalone, offline, localStorage-based. |
 
-The APK is a native WebView wrapper around the single-file `app.html`, so the
-full app works offline with data persisted on-device (localStorage).
-
-To rebuild it yourself (requires Android SDK; set `ANDROID_HOME`):
-
-```bash
-cd android
-gradle assembleRelease
-# output: android/app/build/outputs/apk/release/app-release.apk
-```
+Install: copy the APK to your phone, open it, allow "Install from unknown sources" if prompted.
 
 ### Desktop
 1. Open `index.html` in a modern browser
