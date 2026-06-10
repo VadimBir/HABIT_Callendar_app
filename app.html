@@ -6,17 +6,37 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="theme-color" content="#1a73e8">
+    <meta name="theme-color" content="#0381FE">
     <title>HABIT Calendar</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
-            --primary: #1a73e8;
-            --bg: #fff;
-            --bg2: #f8f9fa;
-            --text: #3c4043;
-            --text2: #70757a;
-            --border: #dadce0;
+            --primary: #0381FE;
+            --bg: #FCFCFC;
+            --card: #FFFFFF;
+            --bg2: #F2F3F5;
+            --text: #1A1A1A;
+            --text2: #8E8E93;
+            --border: #E8E8E8;
+            --danger: #F44336;
+            --sun: #E2574C;
+            --sat: #4A7BE2;
+            --scrim: rgba(0,0,0,0.4);
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --primary: #0A84FF;
+                --bg: #000000;
+                --card: #1C1C1E;
+                --bg2: #2C2C2E;
+                --text: #F2F2F7;
+                --text2: #8E8E93;
+                --border: #2C2C2E;
+                --danger: #FF453A;
+                --sun: #FF6961;
+                --sat: #6E9BFF;
+                --scrim: rgba(0,0,0,0.6);
+            }
         }
         html, body {
             height: 100%;
@@ -39,28 +59,42 @@
             touch-action: none;
         }
 
-        /* Header - thin line */
+        /* Header - thin line, One UI left-aligned label */
         #header {
-            height: 40px;
+            height: 48px;
             background: var(--bg);
             border-bottom: 1px solid var(--border);
             display: flex;
             align-items: center;
-            padding: 0 8px;
-            gap: 8px;
+            padding: 0 6px 0 12px;
+            gap: 4px;
             flex-shrink: 0;
         }
         #header h1 {
-            font-size: 16px;
-            font-weight: 400;
+            font-size: 20px;
+            font-weight: 700;
             flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            min-height: 40px;
+            letter-spacing: -0.3px;
         }
+        #header h1::after {
+            content: '⌄';
+            font-size: 14px;
+            font-weight: 400;
+            color: var(--text2);
+            margin-top: -4px;
+        }
+        #header h1:active { opacity: 0.6; }
         #header button {
             background: none;
             border: none;
-            padding: 4px 8px;
+            padding: 4px 6px;
             min-height: 40px;
-            min-width: 32px;
+            min-width: 36px;
             font-size: 14px;
             color: var(--text);
             cursor: pointer;
@@ -68,10 +102,23 @@
             align-items: center;
             justify-content: center;
         }
-        #header button:active { background: var(--bg2); border-radius: 4px; }
+        #header button:active { background: var(--bg2); border-radius: 8px; }
+        /* Samsung-style Today button: rounded square showing today's date number */
+        #today-btn {
+            border: 1.5px solid var(--text2) !important;
+            border-radius: 8px !important;
+            font-size: 13px !important;
+            font-weight: 600;
+            min-width: 30px !important;
+            width: 30px;
+            height: 30px;
+            min-height: 30px !important;
+            padding: 0 !important;
+            color: var(--text) !important;
+        }
         #view-toggle {
             border: 1px solid var(--border) !important;
-            border-radius: 4px !important;
+            border-radius: 8px !important;
             font-size: 12px !important;
         }
 
@@ -130,17 +177,21 @@
             border-bottom: 1px solid var(--border);
             background: var(--bg);
             flex-shrink: 0;
+            position: sticky;
+            top: 0;
+            z-index: 5;
         }
         .day-headers.zoom-5 { grid-template-columns: repeat(5, 1fr); }
         .day-headers.zoom-3 { grid-template-columns: repeat(3, 1fr); }
         .day-header {
-            padding: 6px 0;
+            padding: 7px 0;
             text-align: center;
-            font-size: 10px;
+            font-size: 11px;
             font-weight: 500;
             color: var(--text2);
-            text-transform: uppercase;
         }
+        .day-header.sat { color: var(--sat); }
+        .day-header.sun { color: var(--sun); }
 
         /* Month view grid */
         #month-view {
@@ -194,44 +245,45 @@
         }
         .week-row:last-child { border-bottom: none; }
         .day-cell {
-            border-right: 1px solid var(--border);
-            padding: 2px;
+            padding: 3px 2px 2px;
             display: flex;
             flex-direction: column;
             overflow: hidden;
             min-height: 0;
         }
-        .day-cell:last-child { border-right: none; }
         .day-cell:active { background: var(--bg2); }
-        .day-cell.other-month { background: var(--bg2); }
-        .day-cell.other-month .day-num { color: var(--text2); }
+        .day-cell.other-month .day-num { opacity: 0.4; }
+        .day-cell.other-month .day-events { opacity: 0.5; }
         .day-num {
-            width: 20px;
-            height: 20px;
+            width: 22px;
+            height: 22px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 11px;
+            font-size: 12px;
             border-radius: 50%;
-            margin-bottom: 2px;
+            margin: 0 auto 2px;
         }
+        .day-cell.sat .day-num { color: var(--sat); }
+        .day-cell.sun .day-num { color: var(--sun); }
         .day-cell.today .day-num {
             background: var(--primary);
-            color: #fff;
-            font-weight: 500;
+            color: #fff !important;
+            font-weight: 600;
         }
         .day-events {
             flex: 1;
             display: flex;
             flex-direction: column;
-            gap: 1px;
+            gap: 2px;
             overflow: hidden;
         }
         .event-bar {
-            height: 12px;
-            border-radius: 2px;
-            padding: 0 2px;
-            font-size: 8px;
+            height: 15px;
+            border-radius: 4px;
+            padding: 0 4px;
+            font-size: 10px;
+            font-weight: 600;
             color: #fff;
             display: flex;
             align-items: center;
@@ -242,12 +294,12 @@
         .event-bar.continuous {
             background: transparent !important;
             border: 1px solid;
-            color: var(--text);
         }
         .event-more {
-            font-size: 8px;
+            font-size: 10px;
             color: var(--text2);
-            padding: 1px 2px;
+            padding: 0 4px;
+            font-weight: 500;
         }
 
         /* Divider */
@@ -311,13 +363,14 @@
         .task-item {
             display: flex;
             align-items: center;
-            gap: 6px;
-            padding: 6px;
+            gap: 8px;
+            padding: 8px 10px;
             background: var(--bg2);
-            border-radius: 4px;
-            border-left: 3px solid;
+            border-radius: 12px;
+            border-left: 4px solid;
         }
-        .task-item input[type="checkbox"] { width: 14px; height: 14px; }
+        .task-item:active { opacity: 0.8; }
+        .task-item input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--primary); flex-shrink: 0; }
         .task-info { flex: 1; min-width: 0; }
         .task-title {
             font-size: 12px;
@@ -371,15 +424,18 @@
             background: var(--primary);
             color: #fff;
             border: none;
-            font-size: 20px;
+            font-size: 24px;
+            font-weight: 300;
+            line-height: 1;
             cursor: pointer;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 12px rgba(3,129,254,0.4);
             z-index: 1000;
             display: flex;
             align-items: center;
             justify-content: center;
+            transition: transform 0.15s ease-out;
         }
-        #fab:active { transform: scale(0.95); }
+        #fab:active { transform: scale(0.92); }
 
         /* Modals */
         .modal {
@@ -394,10 +450,10 @@
         }
         .modal.active { display: flex; }
         .modal-content {
-            background: var(--bg);
-            border-radius: 8px;
+            background: var(--card);
+            border-radius: 26px;
             width: 100%;
-            max-width: 360px;
+            max-width: 380px;
             max-height: 90vh;
             max-height: 90dvh;
             overflow-y: auto;
@@ -406,13 +462,12 @@
             overscroll-behavior: contain;
         }
         .modal-header {
-            padding: 12px;
-            border-bottom: 1px solid var(--border);
+            padding: 16px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-        .modal-header h2 { font-size: 16px; font-weight: 500; }
+        .modal-header h2 { font-size: 20px; font-weight: 700; }
         .close-btn {
             background: none;
             border: none;
@@ -427,30 +482,67 @@
             justify-content: center;
             margin: -8px -8px -8px 0;
         }
-        .modal-body { padding: 12px; }
-        .form-group { margin-bottom: 12px; }
+        .modal-body { padding: 8px 16px 4px; }
+        .form-group { margin-bottom: 14px; }
         .form-group label {
             display: block;
-            font-size: 11px;
-            font-weight: 500;
+            font-size: 12px;
+            font-weight: 600;
             color: var(--text2);
-            margin-bottom: 4px;
+            margin-bottom: 6px;
         }
         .form-group input,
         .form-group select,
         .form-group textarea {
             width: 100%;
-            padding: 8px;
+            padding: 12px;
             border: 1px solid var(--border);
-            border-radius: 4px;
-            font-size: 13px;
+            border-radius: 12px;
+            font-size: 15px;
             font-family: inherit;
+            background: var(--bg2);
+            color: var(--text);
         }
         .form-group input:focus,
         .form-group select:focus,
         .form-group textarea:focus {
             outline: 2px solid var(--primary);
             border-color: transparent;
+        }
+        /* Large borderless title field (One UI) */
+        #task-title {
+            border: none !important;
+            background: transparent !important;
+            font-size: 22px !important;
+            font-weight: 600;
+            padding: 8px 0 !important;
+            border-radius: 0 !important;
+        }
+        #task-title:focus { outline: none !important; border-bottom: 2px solid var(--primary) !important; }
+        /* Color-circle selector row */
+        .color-circles {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+        }
+        .color-circle {
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            cursor: pointer;
+            position: relative;
+            flex-shrink: 0;
+            border: 2px solid transparent;
+        }
+        .color-circle.selected {
+            box-shadow: 0 0 0 2px var(--card), 0 0 0 4px var(--primary);
+        }
+        .color-circle.add-new {
+            background: var(--bg2);
+            color: var(--text2);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px; font-weight: 300;
+            border: 1px dashed var(--border);
         }
         .form-row { display: flex; gap: 6px; }
         .form-row > * { flex: 1; }
@@ -465,35 +557,63 @@
         }
         .form-actions {
             display: flex;
-            gap: 6px;
-            justify-content: flex-end;
-            padding: 12px;
-            border-top: 1px solid var(--border);
+            gap: 8px;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px 16px;
         }
         .btn {
-            padding: 6px 12px;
+            padding: 10px 18px;
             border: none;
-            border-radius: 4px;
-            font-size: 13px;
-            font-weight: 500;
+            border-radius: 20px;
+            font-size: 15px;
+            font-weight: 600;
             cursor: pointer;
         }
+        .btn:active { opacity: 0.7; }
         .btn-primary { background: var(--primary); color: #fff; }
-        .btn-secondary { background: transparent; color: var(--primary); }
-        .btn-danger { background: #d93025; color: #fff; }
+        .btn-secondary { background: transparent; color: var(--text2); }
+        .btn-danger { background: var(--danger); color: #fff; }
+        /* One UI toggle switch */
+        .toggle {
+            position: relative;
+            width: 46px; height: 28px;
+            flex-shrink: 0;
+            cursor: pointer;
+        }
+        .toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+        .toggle .track {
+            position: absolute; inset: 0;
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            transition: background 0.2s;
+        }
+        .toggle .knob {
+            position: absolute; top: 3px; left: 3px;
+            width: 22px; height: 22px;
+            background: var(--text2);
+            border-radius: 50%;
+            transition: transform 0.2s, background 0.2s;
+        }
+        .toggle input:checked + .track { background: var(--primary); border-color: var(--primary); }
+        .toggle input:checked ~ .knob { transform: translateX(18px); background: #fff; }
         #reminders-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 6px; }
         .reminder-row { display: flex; gap: 6px; align-items: center; }
         .reminder-row input, .reminder-row select { flex: 1; padding: 6px; font-size: 12px; }
         .reminder-row button { background: none; border: none; color: #d93025; font-size: 16px; cursor: pointer; }
         .text-btn {
-            background: none;
-            border: 1px solid var(--border);
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 11px;
+            background: var(--bg2);
+            border: none;
+            padding: 8px 14px;
+            border-radius: 16px;
+            font-size: 13px;
+            font-weight: 600;
             color: var(--primary);
             cursor: pointer;
+            min-height: 36px;
         }
+        .text-btn:active { opacity: 0.7; }
         .day-event-item {
             padding: 10px;
             background: var(--bg2);
@@ -503,10 +623,166 @@
         }
         .day-event-time { font-size: 10px; color: var(--text2); margin-bottom: 3px; }
         .day-event-title { font-weight: 500; font-size: 13px; }
-        .setting-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-        .setting-row input[type="checkbox"] { width: 16px; height: 16px; }
+        .settings-card {
+            background: var(--bg2);
+            border-radius: 16px;
+            margin-bottom: 12px;
+            overflow: hidden;
+        }
+        .setting-row {
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 10px;
+            padding: 14px 16px;
+            min-height: 48px;
+            font-size: 15px;
+        }
+        .setting-row + .setting-row { border-top: 1px solid var(--border); }
+        .setting-row:active { background: var(--border); }
+        .setting-row .chev { color: var(--text2); font-size: 20px; }
         .empty { text-align: center; color: var(--text2); padding: 16px; font-size: 12px; }
         .hidden { display: none !important; }
+
+        /* ===== One UI bottom sheets ===== */
+        .sheet {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 2100;
+        }
+        .sheet.active { display: block; }
+        .sheet-scrim {
+            position: absolute;
+            inset: 0;
+            background: var(--scrim);
+            opacity: 0;
+            transition: opacity 0.25s ease-out;
+        }
+        .sheet.active .sheet-scrim { opacity: 1; }
+        .sheet-panel {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--card);
+            border-radius: 26px 26px 0 0;
+            max-height: 85%;
+            display: flex;
+            flex-direction: column;
+            transform: translateY(100%);
+            transition: transform 0.25s ease-out;
+            box-shadow: 0 -4px 24px rgba(0,0,0,0.15);
+            padding-bottom: env(safe-area-inset-bottom, 0);
+        }
+        .sheet.active .sheet-panel { transform: translateY(0); }
+        .sheet-grip {
+            width: 36px;
+            height: 4px;
+            border-radius: 2px;
+            background: var(--border);
+            margin: 10px auto 4px;
+            flex-shrink: 0;
+        }
+        .sheet-header {
+            padding: 6px 24px 10px;
+            font-size: 20px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+        .sheet-body {
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+            touch-action: pan-y;
+            padding: 0 16px 16px;
+        }
+
+        /* Agenda rows (day sheet) */
+        .agenda-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 8px;
+            border-radius: 14px;
+            min-height: 48px;
+        }
+        .agenda-row:active { background: var(--bg2); }
+        .agenda-bar {
+            width: 4px;
+            align-self: stretch;
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+        .agenda-main { flex: 1; min-width: 0; }
+        .agenda-time { font-size: 12px; color: var(--text2); }
+        .agenda-title {
+            font-size: 15px;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .agenda-row.done .agenda-title { text-decoration: line-through; opacity: 0.6; }
+        .agenda-check { width: 22px; height: 22px; flex-shrink: 0; accent-color: var(--primary); }
+        .agenda-add {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 8px;
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 15px;
+            min-height: 48px;
+        }
+        .agenda-add:active { background: var(--bg2); border-radius: 14px; }
+        .agenda-add .plus {
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: #fff;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px; font-weight: 300; line-height: 1;
+        }
+
+        /* Year/month picker */
+        #picker-body { padding: 4px 16px 16px; }
+        .picker-section-label {
+            font-size: 12px; font-weight: 600; color: var(--text2);
+            padding: 12px 8px 6px; text-transform: uppercase;
+        }
+        .picker-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+        }
+        .picker-cell {
+            text-align: center;
+            padding: 12px 0;
+            border-radius: 12px;
+            font-size: 14px;
+            min-height: 44px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .picker-cell:active { background: var(--bg2); }
+        .picker-cell.selected { background: var(--primary); color: #fff; font-weight: 600; }
+        .picker-cell.disabled { opacity: 0.3; pointer-events: none; }
+        #picker-years {
+            max-height: 200px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-y;
+            overscroll-behavior: contain;
+        }
+
+        /* Task detail sheet actions */
+        .detail-meta { padding: 0 8px 12px; }
+        .detail-meta .dm-row { font-size: 14px; color: var(--text2); margin: 4px 0; }
+        .detail-actions {
+            display: flex;
+            gap: 8px;
+            padding: 8px 8px 4px;
+        }
+        .detail-actions .btn { flex: 1; padding: 12px; border-radius: 14px; font-size: 15px; }
+        .detail-actions .btn-soft { background: var(--bg2); color: var(--text); }
 
         /* Linear view */
         #linear-view {
@@ -578,12 +854,12 @@
 <body>
     <!-- Header -->
     <header id="header">
-        <button id="today-btn">Today</button>
-        <button id="prev-btn">&lt;</button>
         <h1 id="month-title">November 2025</h1>
-        <button id="next-btn">&gt;</button>
+        <button id="prev-btn" aria-label="Previous">&lt;</button>
+        <button id="next-btn" aria-label="Next">&gt;</button>
+        <button id="today-btn" aria-label="Jump to today">10</button>
         <button id="view-toggle">Month</button>
-        <button id="settings-btn">⚙</button>
+        <button id="settings-btn" aria-label="Settings">⚙</button>
     </header>
 
     <!-- Main -->
@@ -600,8 +876,8 @@
                     <div class="day-header">Wed</div>
                     <div class="day-header">Thu</div>
                     <div class="day-header">Fri</div>
-                    <div class="day-header">Sat</div>
-                    <div class="day-header">Sun</div>
+                    <div class="day-header sat">Sat</div>
+                    <div class="day-header sun">Sun</div>
                 </div>
                 <!-- Month view (default) -->
                 <div id="month-view"></div>
@@ -627,20 +903,17 @@
     <div id="task-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>New Task</h2>
-                <button class="close-btn">&times;</button>
+                <button class="btn btn-secondary" id="cancel-btn">Cancel</button>
+                <button class="btn btn-primary" id="save-btn">Save</button>
             </div>
             <div class="modal-body">
                 <div class="form-group">
-                    <label>Title</label>
-                    <input type="text" id="task-title" placeholder="Add title" required>
+                    <input type="text" id="task-title" placeholder="Title" required>
                 </div>
                 <div class="form-group">
                     <label>Calendar</label>
-                    <div class="form-row">
-                        <select id="task-color"></select>
-                        <button type="button" class="text-btn" id="new-color-btn">+</button>
-                    </div>
+                    <div class="color-circles" id="task-color-circles"></div>
+                    <select id="task-color" class="hidden"></select>
                 </div>
                 <div class="form-group">
                     <label>Type</label>
@@ -674,21 +947,48 @@
                     <textarea id="task-desc" rows="2"></textarea>
                 </div>
             </div>
-            <div class="form-actions">
-                <button class="btn btn-secondary" id="cancel-btn">Cancel</button>
-                <button class="btn btn-primary" id="save-btn">Save</button>
+        </div>
+    </div>
+
+    <!-- Day Agenda Bottom Sheet -->
+    <div id="day-sheet" class="sheet">
+        <div class="sheet-scrim" data-close="day-sheet"></div>
+        <div class="sheet-panel">
+            <div class="sheet-grip"></div>
+            <div class="sheet-header" id="day-title">November 19</div>
+            <div class="sheet-body" id="day-events"></div>
+        </div>
+    </div>
+
+    <!-- Year/Month Picker Bottom Sheet -->
+    <div id="picker-sheet" class="sheet">
+        <div class="sheet-scrim" data-close="picker-sheet"></div>
+        <div class="sheet-panel">
+            <div class="sheet-grip"></div>
+            <div class="sheet-header">Go to date</div>
+            <div class="sheet-body" id="picker-body">
+                <div class="picker-section-label">Year</div>
+                <div id="picker-years" class="picker-grid"></div>
+                <div class="picker-section-label">Month</div>
+                <div id="picker-months" class="picker-grid"></div>
             </div>
         </div>
     </div>
 
-    <!-- Day Modal -->
-    <div id="day-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="day-title">November 19</h2>
-                <button class="close-btn">&times;</button>
+    <!-- Task Detail Bottom Sheet -->
+    <div id="detail-sheet" class="sheet">
+        <div class="sheet-scrim" data-close="detail-sheet"></div>
+        <div class="sheet-panel">
+            <div class="sheet-grip"></div>
+            <div class="sheet-header" id="detail-title">Task</div>
+            <div class="sheet-body">
+                <div class="detail-meta" id="detail-meta"></div>
+                <div class="detail-actions">
+                    <button class="btn btn-soft" id="detail-done-btn">Done</button>
+                    <button class="btn btn-soft" id="detail-edit-btn">Edit</button>
+                    <button class="btn btn-danger" id="detail-delete-btn">Delete</button>
+                </div>
             </div>
-            <div class="modal-body" id="day-events"></div>
         </div>
     </div>
 
@@ -706,7 +1006,7 @@
                 </div>
                 <div class="form-group">
                     <label>Color</label>
-                    <input type="color" id="color-value" value="#1a73e8">
+                    <input type="color" id="color-value" value="#0381FE">
                 </div>
             </div>
             <div class="form-actions">
@@ -724,15 +1024,23 @@
                 <button class="close-btn">&times;</button>
             </div>
             <div class="modal-body">
-                <div class="setting-row">
-                    <input type="checkbox" id="notif-toggle">
-                    <span>Enable notifications</span>
+                <div class="settings-card">
+                    <div class="setting-row">
+                        <span>Enable notifications</span>
+                        <label class="toggle">
+                            <input type="checkbox" id="notif-toggle">
+                            <span class="track"></span><span class="knob"></span>
+                        </label>
+                    </div>
                 </div>
-                <button class="btn btn-secondary" id="export-btn" style="margin-right:6px">Export</button>
-                <button class="btn btn-secondary" id="import-btn">Import</button>
-                <input type="file" id="import-file" accept=".json" hidden>
-                <br><br>
-                <button class="btn btn-danger" id="clear-btn">Clear all</button>
+                <div class="settings-card">
+                    <div class="setting-row" id="export-btn"><span>Export data</span><span class="chev">›</span></div>
+                    <div class="setting-row" id="import-btn"><span>Import data</span><span class="chev">›</span></div>
+                    <input type="file" id="import-file" accept=".json" hidden>
+                </div>
+                <div class="settings-card">
+                    <div class="setting-row" id="clear-btn"><span style="color:var(--danger)">Clear all data</span><span class="chev">›</span></div>
+                </div>
             </div>
         </div>
     </div>
@@ -747,9 +1055,9 @@
             let colors = JSON.parse(localStorage.getItem(KEYS.COLORS) || '[]');
             if (!colors.length) {
                 colors = [
-                    { id: genId(), name: 'Work', color: '#1a73e8', count: 0 },
-                    { id: genId(), name: 'Personal', color: '#0b8043', count: 0 },
-                    { id: genId(), name: 'Health', color: '#d93025', count: 0 }
+                    { id: genId(), name: 'Work', color: '#69A1FA', count: 0 },
+                    { id: genId(), name: 'Personal', color: '#5DC983', count: 0 },
+                    { id: genId(), name: 'Health', color: '#EF7E73', count: 0 }
                 ];
                 saveColors(colors);
             }
@@ -819,6 +1127,8 @@
         function updateHeader() {
             const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
             document.getElementById('month-title').textContent = `${months[currentMonth]} ${currentYear}`;
+            const tb = document.getElementById('today-btn');
+            if (tb) tb.textContent = new Date().getDate();
         }
 
         function renderMonthView() {
@@ -849,64 +1159,85 @@
             }
         }
 
+        // Earliest reachable week: the week containing the Unix epoch (Jan 1, 1970).
+        const EPOCH_WEEK_START = (() => {
+            const d = new Date(1970, 0, 1);
+            d.setDate(d.getDate() - (d.getDay() + 6) % 7);
+            return d;
+        })();
+
         function renderScrollView() {
             const container = document.getElementById('scroll-view');
             container.innerHTML = '';
 
-            // Start from 4 weeks before today
             const today = new Date();
-            const startDate = new Date(today);
-            startDate.setDate(startDate.getDate() - (startDate.getDay() + 6) % 7 - 28);
+            // Monday of the week 4 weeks before today's week
+            let firstWeekStart = new Date(today);
+            firstWeekStart.setDate(firstWeekStart.getDate() - (firstWeekStart.getDay() + 6) % 7 - 28);
+            if (firstWeekStart < EPOCH_WEEK_START) firstWeekStart = new Date(EPOCH_WEEK_START);
 
             const tasks = getTasks();
             const colors = getColors();
             const visibleIds = getVisibleColorIds();
 
-            // Render 20 weeks (can scroll)
-            for (let week = 0; week < 20; week++) {
+            function makeWeekRow(weekStart) {
                 const row = document.createElement('div');
                 row.className = 'week-row';
-
                 for (let day = 0; day < 7; day++) {
-                    const date = new Date(startDate);
-                    date.setDate(startDate.getDate() + (week * 7) + day);
-                    const cell = createDayCell(date, today, tasks, colors, visibleIds, null);
-                    row.appendChild(cell);
+                    const date = new Date(weekStart);
+                    date.setDate(weekStart.getDate() + day);
+                    row.appendChild(createDayCell(date, today, tasks, colors, visibleIds, null));
                 }
-                container.appendChild(row);
+                return row;
+            }
+
+            for (let week = 0; week < 20; week++) {
+                const weekStart = new Date(firstWeekStart);
+                weekStart.setDate(firstWeekStart.getDate() + week * 7);
+                container.appendChild(makeWeekRow(weekStart));
             }
 
             // Scroll to show current week in middle
             setTimeout(() => {
                 const weekHeight = container.firstChild ? container.firstChild.offsetHeight : 80;
-                container.scrollTop = weekHeight * 4; // 4 weeks from start
+                const weeksBeforeToday = Math.round((new Date(today.getFullYear(), today.getMonth(), today.getDate() - (today.getDay() + 6) % 7) - firstWeekStart) / (7 * 864e5));
+                container.scrollTop = weekHeight * weeksBeforeToday;
             }, 10);
 
-            // Update header on scroll and load more content
+            // Update header on scroll; load more weeks in BOTH directions
+            // (future is unbounded, past is clamped at the epoch week).
             container.onscroll = () => {
                 const weekHeight = container.firstChild ? container.firstChild.offsetHeight : 80;
                 const scrolledWeeks = Math.floor(container.scrollTop / weekHeight);
-                const visibleDate = new Date(startDate);
+                const visibleDate = new Date(firstWeekStart);
                 visibleDate.setDate(visibleDate.getDate() + scrolledWeeks * 7);
                 currentMonth = visibleDate.getMonth();
                 currentYear = visibleDate.getFullYear();
                 updateHeader();
 
-                // Infinite scroll - load more weeks when near bottom
-                if (container.scrollTop + container.clientHeight >= container.scrollHeight - 100) {
-                    const lastWeekStart = new Date(startDate);
+                // Near bottom: append future weeks
+                if (container.scrollTop + container.clientHeight >= container.scrollHeight - weekHeight * 2) {
+                    const lastWeekStart = new Date(firstWeekStart);
                     lastWeekStart.setDate(lastWeekStart.getDate() + container.children.length * 7);
                     for (let week = 0; week < 10; week++) {
-                        const row = document.createElement('div');
-                        row.className = 'week-row';
-                        for (let day = 0; day < 7; day++) {
-                            const date = new Date(lastWeekStart);
-                            date.setDate(lastWeekStart.getDate() + (week * 7) + day);
-                            const cell = createDayCell(date, today, tasks, colors, visibleIds, null);
-                            row.appendChild(cell);
-                        }
-                        container.appendChild(row);
+                        const weekStart = new Date(lastWeekStart);
+                        weekStart.setDate(lastWeekStart.getDate() + week * 7);
+                        container.appendChild(makeWeekRow(weekStart));
                     }
+                }
+
+                // Near top: prepend past weeks down to the epoch
+                if (container.scrollTop <= weekHeight * 2 && firstWeekStart > EPOCH_WEEK_START) {
+                    const weeksAvailable = Math.round((firstWeekStart - EPOCH_WEEK_START) / (7 * 864e5));
+                    const toAdd = Math.min(10, weeksAvailable);
+                    for (let week = 1; week <= toAdd; week++) {
+                        const weekStart = new Date(firstWeekStart);
+                        weekStart.setDate(firstWeekStart.getDate() - week * 7);
+                        container.insertBefore(makeWeekRow(weekStart), container.firstChild);
+                    }
+                    firstWeekStart.setDate(firstWeekStart.getDate() - toAdd * 7);
+                    // Keep the viewport anchored on the same week
+                    container.scrollTop += weekHeight * toAdd;
                 }
             };
         }
@@ -991,7 +1322,7 @@
                     taskEl.style.left = (startOffset * linearDayWidth) + 'px';
                     taskEl.style.width = Math.max(20, (endOffset - startOffset) * linearDayWidth) + 'px';
                     taskEl.textContent = task.title;
-                    taskEl.onclick = () => showTaskModal(task);
+                    taskEl.onclick = () => showTaskDetail(task);
                     track.appendChild(taskEl);
                 }
 
@@ -1041,9 +1372,54 @@
             });
         })();
 
+        // ===== COLOR UTILITIES (One UI pastel chips) =====
+        function hexToRgb(hex) {
+            hex = (hex || '#999999').replace('#', '');
+            if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+            return {
+                r: parseInt(hex.substr(0, 2), 16) || 0,
+                g: parseInt(hex.substr(2, 2), 16) || 0,
+                b: parseInt(hex.substr(4, 2), 16) || 0
+            };
+        }
+        function isDarkMode() {
+            return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        }
+        // Translucent pastel fill of the calendar color
+        function pastelFill(hex) {
+            const { r, g, b } = hexToRgb(hex);
+            return isDarkMode()
+                ? `rgba(${r},${g},${b},0.30)`
+                : `rgba(${r},${g},${b},0.18)`;
+        }
+        // Darker / lighter same-hue text for legibility on the pastel fill
+        function pastelText(hex) {
+            const { r, g, b } = hexToRgb(hex);
+            if (isDarkMode()) {
+                const lr = Math.min(255, r + 90), lg = Math.min(255, g + 90), lb = Math.min(255, b + 90);
+                return `rgb(${lr},${lg},${lb})`;
+            }
+            const dr = Math.round(r * 0.62), dg = Math.round(g * 0.62), db = Math.round(b * 0.62);
+            return `rgb(${dr},${dg},${db})`;
+        }
+        function styleEventBar(bar, color, isContinuous) {
+            const hex = color ? color.color : '#999999';
+            if (isContinuous) {
+                bar.classList.add('continuous');
+                bar.style.borderColor = hex;
+                bar.style.color = pastelText(hex);
+            } else {
+                bar.style.backgroundColor = pastelFill(hex);
+                bar.style.color = pastelText(hex);
+            }
+        }
+
         function createDayCell(date, today, tasks, colors, visibleIds, currentMonthForGray) {
             const cell = document.createElement('div');
             cell.className = 'day-cell';
+            const dow = date.getDay();
+            if (dow === 6) cell.classList.add('sat');
+            if (dow === 0) cell.classList.add('sun');
 
             if (currentMonthForGray !== null && date.getMonth() !== currentMonthForGray) {
                 cell.classList.add('other-month');
@@ -1068,20 +1444,14 @@
                 const bar = document.createElement('div');
                 bar.className = 'event-bar';
                 const color = colors.find(c => c.id === task.colorGroupId);
-
-                if (task.type === 'continuous') {
-                    bar.classList.add('continuous');
-                    bar.style.borderColor = color ? color.color : '#999';
-                } else {
-                    bar.style.backgroundColor = color ? color.color : '#999';
-                }
+                styleEventBar(bar, color, task.type === 'continuous');
 
                 let title = task.title;
                 if (task.type === 'dynamic' && task.postponeCount > 0) {
                     title += ` (+${task.postponeCount}d)`;
                 }
                 bar.textContent = title;
-                bar.onclick = (e) => { e.stopPropagation(); showTaskModal(task); };
+                bar.onclick = (e) => { e.stopPropagation(); showTaskDetail(task); };
                 events.appendChild(bar);
             });
 
@@ -1273,14 +1643,21 @@
         }
 
         // ===== NAVIGATION =====
+        // Earliest navigable month: January 1970 (epoch floor, matches scroll view).
+        const EPOCH_YEAR = 1970, EPOCH_MONTH = 0;
+        function atEpochFloor(year, month) {
+            return year < EPOCH_YEAR || (year === EPOCH_YEAR && month <= EPOCH_MONTH);
+        }
         function prevMonth() {
             if (currentView === 'linear') {
-                // Move back 7 days in linear view
+                // Move back 7 days in linear view (clamped to epoch)
                 const d = new Date(currentYear, currentMonth, currentDay - 7);
+                if (atEpochFloor(d.getFullYear(), d.getMonth()) && d < new Date(EPOCH_YEAR, EPOCH_MONTH, 1)) return;
                 currentYear = d.getFullYear();
                 currentMonth = d.getMonth();
                 currentDay = d.getDate();
             } else {
+                if (atEpochFloor(currentYear, currentMonth)) return; // already at floor
                 currentMonth--;
                 if (currentMonth < 0) {
                     currentMonth = 11;
@@ -1308,13 +1685,19 @@
         }
 
         // ===== MODALS =====
-        function showTaskModal(task = null) {
+        function showTaskModal(task = null, prefillDate = null) {
             editingTaskId = task ? task.id : null;
             document.getElementById('task-title').value = task ? task.title : '';
             document.getElementById('task-type').value = task ? task.type : 'fixed';
             document.getElementById('task-desc').value = task ? (task.description || '') : '';
+            let defaultEnd = '';
+            if (!task && prefillDate) {
+                const d = new Date(prefillDate);
+                d.setHours(9, 0, 0, 0);
+                defaultEnd = formatDateTimeLocal(d.toISOString());
+            }
             document.getElementById('task-start').value = task && task.startDate ? formatDateTimeLocal(task.startDate) : '';
-            document.getElementById('task-end').value = task && task.dueDate ? formatDateTimeLocal(task.dueDate) : '';
+            document.getElementById('task-end').value = task && task.dueDate ? formatDateTimeLocal(task.dueDate) : defaultEnd;
             updateColorSelect(task ? task.colorGroupId : null);
             updateTypeVisibility();
             document.getElementById('reminders-list').innerHTML = '';
@@ -1327,8 +1710,14 @@
             editingTaskId = null;
         }
 
+        // ===== Bottom-sheet helpers =====
+        function openSheet(id) { document.getElementById(id).classList.add('active'); }
+        function closeSheet(id) { document.getElementById(id).classList.remove('active'); }
+
+        let daySheetDate = null;
         function showDayModal(date) {
-            document.getElementById('day-title').textContent = date.toLocaleDateString([], {weekday:'short', month:'short', day:'numeric'});
+            daySheetDate = new Date(date);
+            document.getElementById('day-title').textContent = date.toLocaleDateString([], {weekday:'long', month:'long', day:'numeric'});
             const events = document.getElementById('day-events');
             events.innerHTML = '';
 
@@ -1345,38 +1734,139 @@
             });
 
             if (!filtered.length) {
-                events.innerHTML = '<div class="empty">No tasks</div>';
+                events.innerHTML = '<div class="empty">No events</div>';
             } else {
                 filtered.forEach(task => {
-                    const item = document.createElement('div');
-                    item.className = 'day-event-item';
+                    const row = document.createElement('div');
+                    row.className = 'agenda-row' + (task.completed ? ' done' : '');
                     const color = colors.find(c => c.id === task.colorGroupId);
-                    item.style.borderLeftColor = color ? color.color : '#999';
 
+                    const bar = document.createElement('div');
+                    bar.className = 'agenda-bar';
+                    bar.style.background = color ? color.color : '#999';
+
+                    const main = document.createElement('div');
+                    main.className = 'agenda-main';
                     if (task.dueDate) {
                         const time = document.createElement('div');
-                        time.className = 'day-event-time';
-                        const d = new Date(task.dueDate);
-                        time.textContent = d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-                        item.appendChild(time);
+                        time.className = 'agenda-time';
+                        const start = task.startDate ? new Date(task.startDate) : null;
+                        const due = new Date(task.dueDate);
+                        const fmt = d => d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                        time.textContent = start && start.toDateString() !== due.toDateString()
+                            ? fmt(due) : (start ? `${fmt(start)} – ${fmt(due)}` : fmt(due));
+                        main.appendChild(time);
+                    } else if (task.type === 'continuous') {
+                        const time = document.createElement('div');
+                        time.className = 'agenda-time';
+                        time.textContent = 'Ongoing';
+                        main.appendChild(time);
                     }
-
                     const titleDiv = document.createElement('div');
-                    titleDiv.className = 'day-event-title';
+                    titleDiv.className = 'agenda-title';
                     titleDiv.textContent = task.title;
-                    if (task.type === 'dynamic' && task.postponeCount > 0) {
-                        titleDiv.textContent += ` (+${task.postponeCount}d)`;
-                    }
-                    item.appendChild(titleDiv);
+                    if (task.type === 'dynamic' && task.postponeCount > 0) titleDiv.textContent += ` (+${task.postponeCount}d)`;
+                    main.appendChild(titleDiv);
 
-                    item.onclick = () => {
-                        document.getElementById('day-modal').classList.remove('active');
-                        showTaskModal(task);
-                    };
-                    events.appendChild(item);
+                    const check = document.createElement('input');
+                    check.type = 'checkbox';
+                    check.className = 'agenda-check';
+                    check.checked = !!task.completed;
+                    check.onclick = (e) => { e.stopPropagation(); toggleTask(task.id); row.classList.toggle('done', !task.completed); };
+
+                    main.onclick = () => { closeSheet('day-sheet'); showTaskDetail(task); };
+
+                    row.appendChild(bar);
+                    row.appendChild(main);
+                    row.appendChild(check);
+                    events.appendChild(row);
                 });
             }
-            document.getElementById('day-modal').classList.add('active');
+
+            // Add (+) row that prefills the form with this date
+            const addRow = document.createElement('div');
+            addRow.className = 'agenda-add';
+            addRow.innerHTML = '<span class="plus">+</span><span>Add event</span>';
+            addRow.onclick = () => { closeSheet('day-sheet'); showTaskModal(null, daySheetDate); };
+            events.appendChild(addRow);
+
+            openSheet('day-sheet');
+        }
+
+        // ===== TASK DETAIL SHEET =====
+        let detailTaskId = null;
+        function showTaskDetail(task) {
+            detailTaskId = task.id;
+            const colors = getColors();
+            const color = colors.find(c => c.id === task.colorGroupId);
+            document.getElementById('detail-title').textContent = task.title;
+            const meta = document.getElementById('detail-meta');
+            meta.innerHTML = '';
+            const add = (txt) => { const d = document.createElement('div'); d.className = 'dm-row'; d.textContent = txt; meta.appendChild(d); };
+            if (color) add('Calendar: ' + color.name);
+            add('Type: ' + task.type);
+            if (task.type === 'continuous') {
+                add('Started: ' + new Date(task.createdAt).toLocaleDateString());
+            } else if (task.dueDate) {
+                const due = new Date(task.dueDate);
+                let line = 'Due: ' + due.toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
+                if (task.type === 'dynamic' && task.postponeCount > 0 && task.originalDueDate) {
+                    line += ` — orig ${new Date(task.originalDueDate).toLocaleDateString()} (+${task.postponeCount}d)`;
+                }
+                add(line);
+            }
+            if (task.description) add(task.description);
+            const doneBtn = document.getElementById('detail-done-btn');
+            doneBtn.textContent = task.completed ? 'Undone' : 'Done';
+            openSheet('detail-sheet');
+        }
+
+        // ===== YEAR/MONTH PICKER =====
+        let pickYear = null, pickMonth = null;
+        function showPicker() {
+            pickYear = currentYear;
+            pickMonth = currentMonth;
+            renderPicker();
+            openSheet('picker-sheet');
+            // Scroll selected year into view
+            setTimeout(() => {
+                const sel = document.querySelector('#picker-years .picker-cell.selected');
+                if (sel) sel.scrollIntoView({ block: 'center' });
+            }, 30);
+        }
+        function renderPicker() {
+            const yearsEl = document.getElementById('picker-years');
+            const monthsEl = document.getElementById('picker-months');
+            const nowYear = new Date().getFullYear();
+            const lastYear = Math.max(nowYear + 10, currentYear + 5);
+            yearsEl.innerHTML = '';
+            for (let y = EPOCH_YEAR; y <= lastYear; y++) {
+                const cell = document.createElement('div');
+                cell.className = 'picker-cell' + (y === pickYear ? ' selected' : '');
+                cell.textContent = y;
+                cell.onclick = () => { pickYear = y; if (pickYear === EPOCH_YEAR && pickMonth < EPOCH_MONTH) pickMonth = EPOCH_MONTH; renderPicker(); };
+                yearsEl.appendChild(cell);
+            }
+            const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            monthsEl.innerHTML = '';
+            months.forEach((m, i) => {
+                const cell = document.createElement('div');
+                let cls = 'picker-cell';
+                if (i === pickMonth) cls += ' selected';
+                if (pickYear === EPOCH_YEAR && i < EPOCH_MONTH) cls += ' disabled';
+                cell.className = cls;
+                cell.textContent = m;
+                cell.onclick = () => { pickMonth = i; applyPicker(); };
+                monthsEl.appendChild(cell);
+            });
+        }
+        function applyPicker() {
+            if (atEpochFloor(pickYear, pickMonth)) { pickYear = EPOCH_YEAR; pickMonth = EPOCH_MONTH; }
+            currentYear = pickYear;
+            currentMonth = pickMonth;
+            currentDay = 1;
+            closeSheet('picker-sheet');
+            renderAll();
         }
 
         function updateColorSelect(selectedId) {
@@ -1388,9 +1878,33 @@
                 const opt = document.createElement('option');
                 opt.value = c.id;
                 opt.textContent = `${c.name} (${c.count || 0})`;
-                if (c.id === selectedId) opt.selected = true;
                 select.appendChild(opt);
             });
+            // Default selection: provided id, else first (most-used) color
+            const chosen = selectedId || (colors[0] && colors[0].id) || '';
+            select.value = chosen;
+
+            // Render color circles (sorted by usage), "+ new" last
+            const wrap = document.getElementById('task-color-circles');
+            wrap.innerHTML = '';
+            colors.forEach(c => {
+                const circle = document.createElement('div');
+                circle.className = 'color-circle' + (c.id === chosen ? ' selected' : '');
+                circle.style.background = c.color;
+                circle.title = `${c.name} (${c.count || 0})`;
+                circle.onclick = () => {
+                    select.value = c.id;
+                    wrap.querySelectorAll('.color-circle').forEach(el => el.classList.remove('selected'));
+                    circle.classList.add('selected');
+                };
+                wrap.appendChild(circle);
+            });
+            const addBtn = document.createElement('div');
+            addBtn.className = 'color-circle add-new';
+            addBtn.textContent = '+';
+            addBtn.title = 'New calendar';
+            addBtn.onclick = showColorModal;
+            wrap.appendChild(addBtn);
         }
 
         function updateTypeVisibility() {
@@ -1519,7 +2033,7 @@
         // ===== COLOR MODAL =====
         function showColorModal() {
             document.getElementById('color-name').value = '';
-            document.getElementById('color-value').value = '#1a73e8';
+            document.getElementById('color-value').value = '#0381FE';
             document.getElementById('color-modal').classList.add('active');
         }
         function hideColorModal() { document.getElementById('color-modal').classList.remove('active'); }
@@ -1527,11 +2041,17 @@
             const name = document.getElementById('color-name').value.trim();
             if (!name) { alert('Please enter a name'); return; }
             const colors = getColors();
-            colors.push({ id: genId(), name, color: document.getElementById('color-value').value, count: 0 });
+            const newId = genId();
+            colors.push({ id: newId, name, color: document.getElementById('color-value').value, count: 0 });
             saveColors(colors);
             hideColorModal();
             renderFilters();
-            updateColorSelect();
+            // If the task form is open, select the newly created calendar
+            if (document.getElementById('task-modal').classList.contains('active')) {
+                updateColorSelect(newId);
+            } else {
+                updateColorSelect();
+            }
         }
 
         // ===== SETTINGS =====
@@ -1796,10 +2316,10 @@
         };
         document.getElementById('prev-btn').onclick = prevMonth;
         document.getElementById('next-btn').onclick = nextMonth;
+        document.getElementById('month-title').onclick = showPicker;
         document.getElementById('view-toggle').onclick = toggleView;
         document.getElementById('settings-btn').onclick = showSettings;
         document.getElementById('fab').onclick = () => showTaskModal();
-        document.getElementById('new-color-btn').onclick = showColorModal;
         document.getElementById('add-reminder-btn').onclick = () => addReminderRow();
         document.getElementById('task-type').onchange = updateTypeVisibility;
         document.getElementById('save-btn').onclick = saveTask;
@@ -1824,6 +2344,53 @@
         document.querySelectorAll('.modal').forEach(modal => {
             modal.onclick = (e) => { if (e.target === modal) modal.classList.remove('active'); };
         });
+
+        // ===== Bottom sheets: scrim/grip close + swipe-down to dismiss =====
+        document.querySelectorAll('.sheet-scrim[data-close]').forEach(scrim => {
+            scrim.onclick = () => closeSheet(scrim.dataset.close);
+        });
+        document.querySelectorAll('.sheet').forEach(sheet => {
+            const panel = sheet.querySelector('.sheet-panel');
+            let sy = 0, dragging = false, moved = 0;
+            panel.addEventListener('touchstart', (e) => {
+                if (e.touches.length !== 1) return;
+                // Only start drag-to-dismiss from the upper grip/header region
+                const top = panel.getBoundingClientRect().top;
+                if (e.touches[0].clientY - top > 70) return;
+                sy = e.touches[0].clientY; dragging = true; moved = 0;
+                panel.style.transition = 'none';
+            }, { passive: true });
+            panel.addEventListener('touchmove', (e) => {
+                if (!dragging) return;
+                moved = Math.max(0, e.touches[0].clientY - sy);
+                panel.style.transform = `translateY(${moved}px)`;
+            }, { passive: true });
+            panel.addEventListener('touchend', () => {
+                if (!dragging) return;
+                dragging = false;
+                panel.style.transition = '';
+                panel.style.transform = '';
+                if (moved > 90) closeSheet(sheet.id);
+            });
+        });
+
+        // Task detail actions
+        document.getElementById('detail-edit-btn').onclick = () => {
+            const t = getTasks().find(x => x.id === detailTaskId);
+            closeSheet('detail-sheet');
+            if (t) showTaskModal(t);
+        };
+        document.getElementById('detail-done-btn').onclick = () => {
+            if (detailTaskId) { toggleTask(detailTaskId); closeSheet('detail-sheet'); }
+        };
+        document.getElementById('detail-delete-btn').onclick = () => {
+            if (detailTaskId && confirm('Delete this task?')) {
+                const tasks = getTasks().filter(t => t.id !== detailTaskId);
+                saveTasks(tasks);
+                closeSheet('detail-sheet');
+                renderAll();
+            }
+        };
 
         // ===== VIEWPORT / RESIZE =====
         // Keep layout height in sync with the visual viewport so the task form
