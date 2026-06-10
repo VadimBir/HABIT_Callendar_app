@@ -942,6 +942,19 @@ public class EditEventFragment extends Fragment implements EventHandler, OnColor
         }
     }
 
+    /**
+     * HABIT: applies cadence reminders / continuous handling onto the model
+     * after the UI has been read but before save. Always returns true so it can
+     * be chained inside the save condition.
+     */
+    private boolean habitPrepareModel(boolean isNewEvent, String type, String cadence) {
+        if (isNewEvent) {
+            com.android.calendar.habit.HabitEditorHelper.prepareNewEventModel(
+                    mModel, type, cadence);
+        }
+        return true;
+    }
+
     class Done implements EditEventHelper.EditDoneRunnable {
         private int mCode = -1;
 
@@ -961,13 +974,31 @@ public class EditEventFragment extends Fragment implements EventHandler, OnColor
                 mModification = Utils.MODIFY_ALL;
             }
 
+            // HABIT: capture editor selections before save.
+            final boolean habitIsNewEvent = mModel != null && mModel.mUri == null;
+            final String habitType = mView != null
+                    ? mView.getHabitType()
+                    : com.android.calendar.habit.HabitStore.TYPE_FIXED;
+            final String habitCadence = mView != null
+                    ? mView.getHabitCadence()
+                    : com.android.calendar.habit.HabitStore.CADENCE_D2D;
             if ((mCode & Utils.DONE_SAVE) != 0 && mModel != null
                     && (EditEventHelper.canRespond(mModel)
                     || EditEventHelper.canModifyEvent(mModel))
                     && mView.prepareForSave()
                     && !isEmptyNewEvent()
+                    && habitPrepareModel(habitIsNewEvent, habitType, habitCadence)
                     && mModel.normalizeReminders()
                     && mHelper.saveEvent(mModel, mOriginalModel, mModification)) {
+                // HABIT: persist task metadata after a successful save.
+                if (mActivity != null) {
+                    com.android.calendar.habit.HabitEditorHelper.persistAfterSave(
+                            mActivity, mModel, habitIsNewEvent, habitType, habitCadence);
+                    if (!habitIsNewEvent) {
+                        com.android.calendar.habit.HabitEditorHelper.applyTitlePrefixForExisting(
+                                mActivity, mModel.mId, habitType, mModel.mTitle);
+                    }
+                }
                 int stringResource;
                 if (!mModel.mAttendeesList.isEmpty()) {
                     if (mModel.mUri != null) {

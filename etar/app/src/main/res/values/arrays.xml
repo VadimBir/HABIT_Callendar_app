@@ -521,4 +521,10 @@
         <item>@drawable/logo_calendar_30_adaptive</item>
         <item>@drawable/logo_calendar_31_adaptive</item>
     </array>
+
+    <string-array name="habit_task_types">
+        <item>@string/habit_type_fixed</item>
+        <item>@string/habit_type_continuous</item>
+        <item>@string/habit_type_dynamic</item>
+    </string-array>
 </resources>

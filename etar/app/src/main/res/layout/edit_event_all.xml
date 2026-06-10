@@ -640,6 +640,62 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
+    <!-- HABIT task layer: task type + reminder cadence -->
+    <LinearLayout
+        android:id="@+id/habit_section"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/habit_task_type_label" />
+
+        <Spinner
+            android:id="@+id/habit_task_type"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:entries="@array/habit_task_types"
+            android:popupBackground="?attr/colorSurfaceContainer" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/habit_cadence_label" />
+
+        <RadioGroup
+            android:id="@+id/habit_cadence_group"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <RadioButton
+                android:id="@+id/habit_cadence_d2d"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checked="true"
+                android:text="@string/habit_cadence_d2d" />
+
+            <RadioButton
+                android:id="@+id/habit_cadence_w2w"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/habit_cadence_w2w" />
+
+            <RadioButton
+                android:id="@+id/habit_cadence_m2m"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/habit_cadence_m2m" />
+        </RadioGroup>
+    </LinearLayout>
+
     <!-- WHEN - Read-only textview version of FROM/TO (below) -->
     <LinearLayout
         android:id="@+id/when_row"

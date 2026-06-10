@@ -151,6 +151,9 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
     Button mRruleButton;
     Spinner mAvailabilitySpinner;
     Spinner mAccessLevelSpinner;
+    // HABIT task layer widgets
+    Spinner mHabitTaskType;
+    RadioGroup mHabitCadenceGroup;
     RadioGroup mResponseRadioGroup;
     TextView mTitleTextView;
     AutoCompleteTextView mLocationTextView;
@@ -262,6 +265,8 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
         mRruleButton = (Button) view.findViewById(R.id.rrule);
         mAvailabilitySpinner = (Spinner) view.findViewById(R.id.availability);
         mAccessLevelSpinner = (Spinner) view.findViewById(R.id.visibility);
+        mHabitTaskType = (Spinner) view.findViewById(R.id.habit_task_type);
+        mHabitCadenceGroup = (RadioGroup) view.findViewById(R.id.habit_cadence_group);
         mCalendarSelectorGroupBackground = view.findViewById(R.id.calendar_selector_group_background);
         mRemindersGroup = view.findViewById(R.id.reminder_items_container);
         mResponseGroup = view.findViewById(R.id.response_group);
@@ -506,6 +511,57 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
             return false;
         }
         return fillModelFromUI();
+    }
+
+    /** HABIT: returns the selected task type, one of HabitStore.TYPE_*. */
+    public String getHabitType() {
+        if (mHabitTaskType == null) {
+            return com.android.calendar.habit.HabitStore.TYPE_FIXED;
+        }
+        switch (mHabitTaskType.getSelectedItemPosition()) {
+            case 1:
+                return com.android.calendar.habit.HabitStore.TYPE_CONTINUOUS;
+            case 2:
+                return com.android.calendar.habit.HabitStore.TYPE_DYNAMIC;
+            default:
+                return com.android.calendar.habit.HabitStore.TYPE_FIXED;
+        }
+    }
+
+    /** HABIT: returns the selected cadence, one of HabitStore.CADENCE_*. */
+    public String getHabitCadence() {
+        if (mHabitCadenceGroup == null) {
+            return com.android.calendar.habit.HabitStore.CADENCE_D2D;
+        }
+        int id = mHabitCadenceGroup.getCheckedRadioButtonId();
+        if (id == R.id.habit_cadence_w2w) {
+            return com.android.calendar.habit.HabitStore.CADENCE_W2W;
+        } else if (id == R.id.habit_cadence_m2m) {
+            return com.android.calendar.habit.HabitStore.CADENCE_M2M;
+        }
+        return com.android.calendar.habit.HabitStore.CADENCE_D2D;
+    }
+
+    /** HABIT: preselect widgets from an existing store entry. */
+    public void setHabitSelection(String type, String cadence) {
+        if (mHabitTaskType != null && type != null) {
+            if (com.android.calendar.habit.HabitStore.TYPE_CONTINUOUS.equals(type)) {
+                mHabitTaskType.setSelection(1);
+            } else if (com.android.calendar.habit.HabitStore.TYPE_DYNAMIC.equals(type)) {
+                mHabitTaskType.setSelection(2);
+            } else {
+                mHabitTaskType.setSelection(0);
+            }
+        }
+        if (mHabitCadenceGroup != null && cadence != null) {
+            if (com.android.calendar.habit.HabitStore.CADENCE_W2W.equals(cadence)) {
+                mHabitCadenceGroup.check(R.id.habit_cadence_w2w);
+            } else if (com.android.calendar.habit.HabitStore.CADENCE_M2M.equals(cadence)) {
+                mHabitCadenceGroup.check(R.id.habit_cadence_m2m);
+            } else {
+                mHabitCadenceGroup.check(R.id.habit_cadence_d2d);
+            }
+        }
     }
 
     public boolean fillModelFromReadOnlyUi() {
@@ -840,6 +896,15 @@ public class EditEventView implements View.OnClickListener, DialogInterface.OnCa
         }
 
         boolean canRespond = EditEventHelper.canRespond(model);
+
+        // HABIT: preselect task type / cadence for existing events.
+        if (model.mId > 0) {
+            com.android.calendar.habit.HabitStore.Entry habit =
+                    com.android.calendar.habit.HabitStore.getInstance(mActivity).get(model.mId);
+            if (habit != null) {
+                setHabitSelection(habit.type, habit.cadence);
+            }
+        }
 
         {
             long begin = model.mStart;

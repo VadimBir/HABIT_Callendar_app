@@ -186,6 +186,7 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
         }
     };
     private FloatingActionButton mFab;
+    private com.android.calendar.habit.HabitTaskPanel mHabitPanel;
     private View mSecondaryPane;
     private String mTimeZone;
     private boolean mShowCalendarControls;
@@ -355,6 +356,7 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
         mNavigationView = binding.navigationView;
 
         mFab = binding.floatingActionButton;
+        mHabitPanel = binding.habitTaskPanel;
 
         if (mIsTabletConfig) {
             mDateRange = binding.include.dateBar;
@@ -609,6 +611,12 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
 
         mContentResolver.registerContentObserver(CalendarContract.Events.CONTENT_URI,
                 true, mObserver);
+
+        // HABIT: auto-prolong dynamic tasks and roll continuous tasks forward.
+        com.android.calendar.habit.HabitProlongHelper.run(this);
+        if (mHabitPanel != null) {
+            mHabitPanel.refresh();
+        }
         if (mUpdateOnResume) {
             initFragments(mController.getTime(), mController.getViewType(), null);
             mUpdateOnResume = false;

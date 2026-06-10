@@ -861,4 +861,16 @@
     <string name="chips_action_cancel">Cancel</string>
     <!-- Text displayed on the drop down item that is shown when app doesn't have Contact permission. This item will open dialog to request permission. [CHAR LIMIT=50] -->
     <string name="chips_permission_text">Allow contacts suggestions</string>
+
+    <!-- HABIT task layer -->
+    <string name="habit_task_type_label">Task type</string>
+    <string name="habit_type_fixed">Fixed</string>
+    <string name="habit_type_continuous">Continuous</string>
+    <string name="habit_type_dynamic">Dynamic</string>
+    <string name="habit_cadence_label">Reminder cadence</string>
+    <string name="habit_cadence_d2d">D2D</string>
+    <string name="habit_cadence_w2w">W2W</string>
+    <string name="habit_cadence_m2m">M2M</string>
+    <string name="habit_tasks_title">Upcoming tasks</string>
+    <string name="habit_no_tasks">No upcoming tasks</string>
 </resources>
