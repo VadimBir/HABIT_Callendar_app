@@ -98,6 +98,25 @@ Shows original date and postponement count: `Task Name (+5 days)`
 
 ## Installation
 
+### Android (APK)
+
+A ready-to-install APK is committed in the repo: **`apk/HABIT-Calendar.apk`**.
+
+1. Copy the APK to your phone (or download it from GitHub)
+2. Open it and allow "Install from unknown sources" if prompted
+3. Launch **HABIT Calendar** from your app drawer
+
+The APK is a native WebView wrapper around the single-file `app.html`, so the
+full app works offline with data persisted on-device (localStorage).
+
+To rebuild it yourself (requires Android SDK; set `ANDROID_HOME`):
+
+```bash
+cd android
+gradle assembleRelease
+# output: android/app/build/outputs/apk/release/app-release.apk
+```
+
 ### Desktop
 1. Open `index.html` in a modern browser
 2. (Optional) Install as PWA via browser menu

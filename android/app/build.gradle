@@ -1,0 +1,37 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.habit.calendar'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.habit.calendar"
+        minSdk 26
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            // Signed with the debug key so the APK is directly installable.
+            signingConfig signingConfigs.debug
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+// Copy the single-file web app into assets before every build so the APK
+// always ships the latest app.html from the repo root.
+tasks.register('syncWebApp', Copy) {
+    from rootProject.file('../app.html')
+    into 'src/main/assets'
+}
+preBuild.dependsOn syncWebApp
