@@ -26,8 +26,18 @@
             background: var(--bg);
             overflow: hidden;
             -webkit-tap-highlight-color: transparent;
+            overscroll-behavior: none;
         }
-        body { display: flex; flex-direction: column; }
+        body {
+            display: flex;
+            flex-direction: column;
+            /* Use dynamic viewport height so layout adapts to Android WebView
+               chrome / keyboard; JS also sets --app-height from visualViewport. */
+            height: 100vh;
+            height: 100dvh;
+            height: var(--app-height, 100dvh);
+            touch-action: none;
+        }
 
         /* Header - thin line */
         #header {
@@ -49,9 +59,14 @@
             background: none;
             border: none;
             padding: 4px 8px;
+            min-height: 40px;
+            min-width: 32px;
             font-size: 14px;
             color: var(--text);
             cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         #header button:active { background: var(--bg2); border-radius: 4px; }
         #view-toggle {
@@ -79,15 +94,17 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 6px;
+            padding: 8px 4px;
+            min-height: 40px;
             cursor: pointer;
         }
-        .filter-item input { width: 14px; height: 14px; }
+        .filter-item input { width: 16px; height: 16px; flex-shrink: 0; }
         .color-dot {
             width: 10px;
             height: 10px;
             border-radius: 2px;
             margin-left: 4px;
+            flex-shrink: 0;
         }
 
         /* Content area */
@@ -114,6 +131,8 @@
             background: var(--bg);
             flex-shrink: 0;
         }
+        .day-headers.zoom-5 { grid-template-columns: repeat(5, 1fr); }
+        .day-headers.zoom-3 { grid-template-columns: repeat(3, 1fr); }
         .day-header {
             padding: 6px 0;
             text-align: center;
@@ -136,6 +155,8 @@
             overflow-y: auto;
             overflow-x: hidden;
             -webkit-overflow-scrolling: touch;
+            touch-action: pan-y;
+            overscroll-behavior: contain;
         }
         #scroll-view .week-row {
             display: grid;
@@ -231,30 +252,47 @@
 
         /* Divider */
         #divider {
-            height: 8px;
+            height: 2px;
             background: var(--border);
             cursor: ns-resize;
             position: relative;
             flex-shrink: 0;
+            touch-action: none;
         }
+        /* Visible handle: ~0.25cm wide x 0.5cm tall rectangle, centered */
         #divider-handle {
             position: absolute;
             left: 50%;
             top: 50%;
             transform: translate(-50%, -50%);
-            width: 24px;
-            height: 4px;
+            width: 0.25cm;
+            height: 0.5cm;
             background: var(--text2);
             border-radius: 2px;
+            z-index: 1;
+        }
+        /* Generous invisible touch target (>=44px) around the small handle */
+        #divider-handle::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 44px;
+            height: 44px;
         }
 
         /* Task panel */
         #task-panel {
             height: 25vh;
+            height: 25dvh;
             min-height: 60px;
             background: var(--bg);
             border-top: 1px solid var(--border);
             overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+            touch-action: pan-y;
             padding: 8px;
             flex-shrink: 0;
         }
@@ -361,7 +399,11 @@
             width: 100%;
             max-width: 360px;
             max-height: 90vh;
+            max-height: 90dvh;
             overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-y;
+            overscroll-behavior: contain;
         }
         .modal-header {
             padding: 12px;
@@ -378,6 +420,12 @@
             color: var(--text2);
             cursor: pointer;
             padding: 0;
+            min-width: 40px;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: -8px -8px -8px 0;
         }
         .modal-body { padding: 12px; }
         .form-group { margin-bottom: 12px; }
@@ -466,6 +514,8 @@
             overflow-x: auto;
             overflow-y: hidden;
             -webkit-overflow-scrolling: touch;
+            touch-action: pan-x;
+            overscroll-behavior: contain;
             display: flex;
             flex-direction: column;
         }
@@ -571,7 +621,7 @@
     </main>
 
     <!-- FAB -->
-    <button id="fab">+</button>
+    <button id="fab" type="button" aria-label="Add task">+</button>
 
     <!-- Task Modal -->
     <div id="task-modal" class="modal">
@@ -734,6 +784,7 @@
                 const dot = document.createElement('div');
                 dot.className = 'color-dot';
                 dot.style.background = c.color;
+                dot.onclick = () => { cb.checked = !cb.checked; renderAll(); };
                 item.appendChild(cb);
                 item.appendChild(dot);
                 item.dataset.colorId = c.id;
@@ -948,8 +999,12 @@
             });
 
             container.appendChild(tracks);
+        }
 
-            // Enable horizontal drag scrolling
+        // Linear view horizontal drag scrolling (bound ONCE to avoid stacking
+        // duplicate listeners on every renderLinearView call).
+        (function setupLinearDrag() {
+            const container = document.getElementById('linear-view');
             let isDraggingLinear = false;
             let linearStartX = 0;
             let linearScrollLeft = 0;
@@ -969,7 +1024,8 @@
             container.addEventListener('mouseup', () => { isDraggingLinear = false; });
             container.addEventListener('mouseleave', () => { isDraggingLinear = false; });
 
-            // Touch support
+            // Touch: single-finger drag pans; native overflow scroll handles it,
+            // so we only assist for environments without momentum scrolling.
             container.addEventListener('touchstart', (e) => {
                 if (e.touches.length === 1) {
                     linearStartX = e.touches[0].pageX;
@@ -983,7 +1039,7 @@
                     container.scrollLeft = linearScrollLeft - walk;
                 }
             });
-        }
+        })();
 
         function createDayCell(date, today, tasks, colors, visibleIds, currentMonthForGray) {
             const cell = document.createElement('div');
@@ -1511,29 +1567,69 @@
         }
 
         // ===== DIVIDER DRAG =====
+        // Unified pointer/touch/mouse drag. Clamps the task-panel height between
+        // 15% and 85% of the available app height. preventDefault while dragging
+        // stops the page from scrolling / rubber-banding on Android WebView.
         let isDragging = false, startY = 0, startHeight = 0;
-        document.getElementById('divider').addEventListener('touchstart', (e) => {
+        const dividerEl = document.getElementById('divider');
+        const taskPanelEl = document.getElementById('task-panel');
+
+        function appHeight() {
+            return (window.visualViewport && window.visualViewport.height) || window.innerHeight;
+        }
+        function dragStart(clientY) {
             isDragging = true;
-            startY = e.touches[0].clientY;
-            startHeight = document.getElementById('task-panel').offsetHeight;
-        });
-        document.addEventListener('touchmove', (e) => {
+            startY = clientY;
+            startHeight = taskPanelEl.offsetHeight;
+            document.body.style.userSelect = 'none';
+        }
+        function dragMove(clientY) {
             if (!isDragging) return;
-            const deltaY = startY - e.touches[0].clientY;
-            document.getElementById('task-panel').style.height = Math.max(60, Math.min(window.innerHeight * 0.6, startHeight + deltaY)) + 'px';
-        });
-        document.addEventListener('touchend', () => { isDragging = false; });
-        document.getElementById('divider').addEventListener('mousedown', (e) => {
-            isDragging = true;
-            startY = e.clientY;
-            startHeight = document.getElementById('task-panel').offsetHeight;
-        });
-        document.addEventListener('mousemove', (e) => {
+            const deltaY = startY - clientY;
+            const h = appHeight();
+            const minH = h * 0.15;
+            const maxH = h * 0.85;
+            taskPanelEl.style.height = Math.max(minH, Math.min(maxH, startHeight + deltaY)) + 'px';
+        }
+        function dragEnd() {
             if (!isDragging) return;
-            const deltaY = startY - e.clientY;
-            document.getElementById('task-panel').style.height = Math.max(60, Math.min(window.innerHeight * 0.6, startHeight + deltaY)) + 'px';
-        });
-        document.addEventListener('mouseup', () => { isDragging = false; });
+            isDragging = false;
+            document.body.style.userSelect = '';
+        }
+
+        // Pointer Events cover both touch and mouse on modern WebViews.
+        if (window.PointerEvent) {
+            dividerEl.addEventListener('pointerdown', (e) => {
+                e.preventDefault();
+                dragStart(e.clientY);
+                if (dividerEl.setPointerCapture) {
+                    try { dividerEl.setPointerCapture(e.pointerId); } catch (_) {}
+                }
+            });
+            document.addEventListener('pointermove', (e) => {
+                if (!isDragging) return;
+                e.preventDefault();
+                dragMove(e.clientY);
+            }, { passive: false });
+            document.addEventListener('pointerup', dragEnd);
+            document.addEventListener('pointercancel', dragEnd);
+        } else {
+            // Fallback: explicit touch + mouse handlers.
+            dividerEl.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                dragStart(e.touches[0].clientY);
+            }, { passive: false });
+            document.addEventListener('touchmove', (e) => {
+                if (!isDragging) return;
+                e.preventDefault();
+                dragMove(e.touches[0].clientY);
+            }, { passive: false });
+            document.addEventListener('touchend', dragEnd);
+            document.addEventListener('touchcancel', dragEnd);
+            dividerEl.addEventListener('mousedown', (e) => { e.preventDefault(); dragStart(e.clientY); });
+            document.addEventListener('mousemove', (e) => { if (isDragging) dragMove(e.clientY); });
+            document.addEventListener('mouseup', dragEnd);
+        }
 
         // ===== PINCH ZOOM =====
         let weekHeight = 80; // Base height in px
@@ -1561,8 +1657,20 @@
             const monthView = document.getElementById('month-view');
             const scrollView = document.getElementById('scroll-view');
 
+            // Retain the top-most visible week across a vertical zoom so the same
+            // future weeks stay in view (rule: width retained, week anchor kept).
+            let anchorWeek = 0;
+            const prevWeekHeight = parseFloat(scrollView.style.getPropertyValue('--week-height')) || weekHeight;
+            if (currentView === 'scroll' && prevWeekHeight > 0) {
+                anchorWeek = scrollView.scrollTop / prevWeekHeight;
+            }
+
             monthView.style.setProperty('--week-height', weekHeight + 'px');
             scrollView.style.setProperty('--week-height', weekHeight + 'px');
+
+            if (currentView === 'scroll') {
+                scrollView.scrollTop = anchorWeek * weekHeight;
+            }
 
             // Apply horizontal zoom (days visible)
             const weekRows = document.querySelectorAll('.week-row');
@@ -1572,16 +1680,17 @@
                 else if (daysZoom === 3) row.classList.add('zoom-3');
             });
 
-            // Update day headers
+            // Update day headers grid + visibility so columns align with cells
+            const dayHeadersEl = document.querySelector('.day-headers');
+            if (dayHeadersEl) {
+                dayHeadersEl.classList.remove('zoom-5', 'zoom-3');
+                if (daysZoom === 5) dayHeadersEl.classList.add('zoom-5');
+                else if (daysZoom === 3) dayHeadersEl.classList.add('zoom-3');
+            }
             const dayHeaders = document.querySelectorAll('.day-header');
+            const visibleCount = daysZoom;
             dayHeaders.forEach((header, i) => {
-                if (daysZoom === 5) {
-                    header.style.display = i < 5 ? 'block' : 'none';
-                } else if (daysZoom === 3) {
-                    header.style.display = i < 3 ? 'block' : 'none';
-                } else {
-                    header.style.display = 'block';
-                }
+                header.style.display = i < visibleCount ? 'block' : 'none';
             });
         }
 
@@ -1630,7 +1739,7 @@
         }
 
         function handlePinchEnd(e) {
-            if (e.touches.length < 2) {
+            if (!e.touches || e.touches.length < 2) {
                 isPinching = false;
             }
         }
@@ -1641,6 +1750,7 @@
             el.addEventListener('touchstart', handlePinchStart, { passive: false });
             el.addEventListener('touchmove', handlePinchMove, { passive: false });
             el.addEventListener('touchend', handlePinchEnd);
+            el.addEventListener('touchcancel', handlePinchEnd);
         });
 
         // Linear view pinch zoom (for day width)
@@ -1657,7 +1767,7 @@
             }
         }, { passive: false });
         linearView.addEventListener('touchmove', (e) => {
-            if (e.touches.length === 2) {
+            if (e.touches.length === 2 && linearPinchStart > 0) {
                 e.preventDefault();
                 const dist = getDistance(e.touches[0], e.touches[1]);
                 const ratio = dist / linearPinchStart;
@@ -1668,6 +1778,8 @@
                 renderLinearView();
             }
         }, { passive: false });
+        linearView.addEventListener('touchend', (e) => { if (!e.touches || e.touches.length < 2) linearPinchStart = 0; });
+        linearView.addEventListener('touchcancel', () => { linearPinchStart = 0; });
 
         // ===== EVENT LISTENERS =====
         document.getElementById('today-btn').onclick = () => {
@@ -1713,9 +1825,54 @@
             modal.onclick = (e) => { if (e.target === modal) modal.classList.remove('active'); };
         });
 
+        // ===== VIEWPORT / RESIZE =====
+        // Keep layout height in sync with the visual viewport so the task form
+        // inputs are never hidden behind the Android soft keyboard, and so the
+        // layout adapts on rotate / WebView chrome changes.
+        function syncViewportHeight() {
+            const h = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
+            document.body.style.setProperty('--app-height', h + 'px');
+        }
+
+        // Default: 4 weeks visible above the divider. Compute the week height
+        // from the actual available calendar area so 4 rows fit.
+        let weekHeightInitialized = false;
+        function computeDefaultWeekHeight() {
+            if (weekHeightInitialized) return;
+            const wrap = document.getElementById('calendar-wrap');
+            const headers = document.querySelector('.day-headers');
+            if (!wrap) return;
+            const headerH = headers && !headers.classList.contains('hidden') ? headers.offsetHeight : 0;
+            const avail = wrap.clientHeight - headerH;
+            if (avail > 0) {
+                weekHeight = Math.max(40, Math.min(160, Math.floor(avail / 4)));
+                weekHeightInitialized = true;
+                applyZoom();
+            }
+        }
+
+        function onViewportChange() {
+            syncViewportHeight();
+            // Re-anchor scroll view current-week position after a resize.
+            if (currentView === 'scroll') {
+                const container = document.getElementById('scroll-view');
+                if (container && container.firstChild) {
+                    // keep header month label in sync; scroll handler recalculates.
+                }
+            }
+        }
+        window.addEventListener('resize', onViewportChange);
+        window.addEventListener('orientationchange', () => setTimeout(onViewportChange, 200));
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', syncViewportHeight);
+        }
+
         // ===== INIT =====
+        syncViewportHeight();
         renderFilters();
         renderAll();
+        // Defer week-height computation until layout has settled.
+        setTimeout(computeDefaultWeekHeight, 50);
     </script>
 </body>
 </html>
