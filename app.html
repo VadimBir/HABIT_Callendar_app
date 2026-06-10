@@ -135,17 +135,45 @@
             border-right: 1px solid var(--border);
             padding: 8px 4px;
             overflow-y: auto;
+            overflow-x: hidden;
             flex-shrink: 0;
+            transition: width 0.25s ease-out;
         }
+        #sidebar.expanded { width: 160px; }
+        #sidebar-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 40px;
+            cursor: pointer;
+            color: var(--text2);
+            font-size: 16px;
+            border-radius: 8px;
+        }
+        #sidebar-toggle:active { background: var(--bg2); }
         .filter-item {
             display: flex;
             align-items: center;
             justify-content: center;
+            gap: 6px;
             padding: 8px 4px;
             min-height: 40px;
             cursor: pointer;
+            border-radius: 8px;
         }
+        #sidebar.expanded .filter-item { justify-content: flex-start; padding: 8px 6px; }
         .filter-item input { width: 16px; height: 16px; flex-shrink: 0; }
+        .filter-name {
+            display: none;
+            flex: 1;
+            min-width: 0;
+            font-size: 12px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .filter-count { display: none; font-size: 11px; color: var(--text2); flex-shrink: 0; }
+        #sidebar.expanded .filter-name, #sidebar.expanded .filter-count { display: block; }
         .color-dot {
             width: 10px;
             height: 10px;
@@ -153,6 +181,7 @@
             margin-left: 4px;
             flex-shrink: 0;
         }
+        #sidebar.expanded .color-dot { margin-left: 0; }
 
         /* Content area */
         #content {
@@ -197,7 +226,7 @@
         #month-view {
             flex: 1;
             display: grid;
-            grid-template-rows: repeat(6, 1fr);
+            grid-template-rows: repeat(var(--month-rows, 6), 1fr);
         }
 
         /* Scroll view - scrollable weeks */
@@ -224,9 +253,14 @@
         #scroll-view .week-row {
             min-height: var(--week-height);
         }
+        /* Month view: all weeks of the month must always fit above the divider.
+           Rows share the available height equally (area / number-of-rows),
+           independent of the scroll-view 4-week default week-height. */
         #month-view {
-            grid-template-rows: repeat(6, minmax(var(--week-height), 1fr));
+            grid-template-rows: repeat(var(--month-rows, 6), 1fr);
+            min-height: 0;
         }
+        #month-view .day-cell { min-height: 0; }
         /* Horizontal zoom - show fewer days */
         .week-row.zoom-5 { grid-template-columns: repeat(5, 1fr); }
         .week-row.zoom-5 .day-cell:nth-child(6),
@@ -278,22 +312,36 @@
             gap: 2px;
             overflow: hidden;
         }
+        /* A timeline row spans the full cell width = the 00:00→23:59 axis.
+           The bar inside is absolutely positioned by time-of-day. */
+        .event-lane {
+            position: relative;
+            height: 15px;
+            width: 100%;
+            flex-shrink: 0;
+        }
         .event-bar {
+            position: absolute;
+            top: 0;
             height: 15px;
             border-radius: 4px;
-            padding: 0 4px;
+            padding: 0 3px;
             font-size: 10px;
             font-weight: 600;
             color: #fff;
-            display: flex;
-            align-items: center;
+            line-height: 15px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            box-sizing: border-box;
         }
         .event-bar.continuous {
             background: transparent !important;
             border: 1px solid;
+        }
+        .event-bar.done {
+            opacity: 0.5;
+            text-decoration: line-through;
         }
         .event-more {
             font-size: 10px;
@@ -929,13 +977,14 @@
                     <label style="margin-top:6px">End</label>
                     <input type="datetime-local" id="task-end">
                 </div>
-                <div class="form-group" id="reminder-type-group" style="display:none">
-                    <label>Reminder Type</label>
+                <div class="form-group" id="reminder-type-group">
+                    <label>Reminder cadence</label>
                     <div class="radio-group">
-                        <label><input type="radio" name="rtype" value="D2D"> D2D</label>
+                        <label><input type="radio" name="rtype" value="D2D" checked> D2D</label>
                         <label><input type="radio" name="rtype" value="W2W"> W2W</label>
-                        <label><input type="radio" name="rtype" value="M2M" checked> M2M</label>
+                        <label><input type="radio" name="rtype" value="M2M"> M2M</label>
                     </div>
+                    <div id="rtype-hint" style="font-size:11px;color:var(--text2);margin-top:4px"></div>
                 </div>
                 <div class="form-group">
                     <label>Reminders</label>
@@ -1064,8 +1113,157 @@
             return colors;
         }
         function saveColors(colors) { localStorage.setItem(KEYS.COLORS, JSON.stringify(colors)); }
+        // Recompute each calendar's usage count from the actual (non-completed)
+        // tasks so the "sorted by usage" order never drifts.
+        function colorUsageCounts() {
+            const counts = {};
+            getTasks().forEach(t => {
+                if (t.completed) return;
+                counts[t.colorGroupId] = (counts[t.colorGroupId] || 0) + 1;
+            });
+            return counts;
+        }
         function getSettings() { return JSON.parse(localStorage.getItem(KEYS.SETTINGS) || '{"notifications":false}'); }
         function saveSettings(settings) { localStorage.setItem(KEYS.SETTINGS, JSON.stringify(settings)); }
+
+        // ===== DYNAMIC AUTO-PROLONG =====
+        // For every non-completed dynamic task whose dueDate is in the past,
+        // repeatedly add one cadence step (D2D=+1d, W2W=+1w, M2M=+1mo) until
+        // dueDate >= now. originalDueDate stays as the reference. postponeCount
+        // accumulates the number of steps. Returns true if anything changed.
+        function advanceDate(d, reminderType) {
+            const n = new Date(d);
+            if (reminderType === 'W2W') n.setDate(n.getDate() + 7);
+            else if (reminderType === 'M2M') n.setMonth(n.getMonth() + 1);
+            else n.setDate(n.getDate() + 1); // D2D default
+            return n;
+        }
+        function prolongDynamicTasks() {
+            const tasks = getTasks();
+            const now = new Date();
+            let changed = false;
+            tasks.forEach(task => {
+                if (task.type !== 'dynamic' || task.completed || !task.dueDate) return;
+                let due = new Date(task.dueDate);
+                if (due >= now) return;
+                if (!task.originalDueDate) task.originalDueDate = task.dueDate;
+                let steps = 0;
+                let guard = 0;
+                while (due < now && guard < 100000) {
+                    due = advanceDate(due, task.reminderType);
+                    steps++;
+                    guard++;
+                }
+                if (steps > 0) {
+                    // Shift startDate by the same delta so the span keeps its length
+                    if (task.startDate) {
+                        const delta = due.getTime() - new Date(task.dueDate).getTime();
+                        task.startDate = new Date(new Date(task.startDate).getTime() + delta).toISOString();
+                    }
+                    task.dueDate = due.toISOString();
+                    task.postponeCount = (task.postponeCount || 0) + steps;
+                    // Spec: the earliest previous reminder re-fires daily against the
+                    // new dueDate. Clear fired keys for the smallest reminder so the
+                    // reminder scanner re-arms it against the moved dueDate.
+                    if (Array.isArray(task.firedReminders) && task.reminders && task.reminders.length) {
+                        const smallest = smallestReminderKeyPrefix(task.reminders);
+                        if (smallest) {
+                            task.firedReminders = task.firedReminders.filter(k => !k.startsWith(smallest + '@'));
+                        }
+                    }
+                    changed = true;
+                }
+            });
+            if (changed) saveTasks(tasks);
+            return changed;
+        }
+        // Whole days between originalDueDate and current dueDate (display reference).
+        function postponeDays(task) {
+            if (!task.originalDueDate || !task.dueDate) return task.postponeCount || 0;
+            const ms = new Date(task.dueDate) - new Date(task.originalDueDate);
+            return Math.round(ms / 864e5);
+        }
+        // Suffix shown wherever a prolonged dynamic task's date appears.
+        function prolongSuffix(task) {
+            if (task.type !== 'dynamic') return '';
+            const days = postponeDays(task);
+            return days > 0 ? ` (+${days} days)` : '';
+        }
+        // The original (reference) date for display of a prolonged dynamic task.
+        function displayDueDate(task) {
+            if (task.type === 'dynamic' && task.originalDueDate && postponeDays(task) > 0) {
+                return task.originalDueDate;
+            }
+            return task.dueDate;
+        }
+
+        // ===== REMINDERS =====
+        const UNIT_MS = { minutes: 60000, hours: 3600000, days: 86400000, weeks: 604800000 };
+        function reminderMs(r) { return (parseFloat(r.amount) || 0) * (UNIT_MS[r.unit] || 0); }
+        function smallestReminderKeyPrefix(reminders) {
+            let best = null, bestMs = Infinity;
+            reminders.forEach(r => {
+                const m = reminderMs(r);
+                if (m < bestMs) { bestMs = m; best = r; }
+            });
+            return best ? `${best.amount}-${best.unit}` : null;
+        }
+        function showToast(msg) {
+            let host = document.getElementById('toast-host');
+            if (!host) {
+                host = document.createElement('div');
+                host.id = 'toast-host';
+                host.style.cssText = 'position:fixed;left:50%;bottom:calc(1cm + 56px);transform:translateX(-50%);z-index:3000;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;';
+                document.body.appendChild(host);
+            }
+            const t = document.createElement('div');
+            t.style.cssText = 'background:rgba(40,40,40,0.95);color:#fff;padding:10px 16px;border-radius:18px;font-size:13px;max-width:80vw;box-shadow:0 4px 16px rgba(0,0,0,0.3);';
+            t.textContent = msg;
+            host.appendChild(t);
+            setTimeout(() => { t.style.transition = 'opacity 0.4s'; t.style.opacity = '0'; setTimeout(() => t.remove(), 400); }, 4000);
+        }
+        function fireReminder(task, r) {
+            const msg = `${task.title} — due ${new Date(task.dueDate).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}`;
+            const title = `Reminder: ${r.amount} ${r.unit} before`;
+            if ('Notification' in window && Notification.permission === 'granted' && getSettings().notifications) {
+                try { new Notification(title, { body: msg }); } catch (_) {}
+            }
+            showToast(`${title}\n${task.title}`);
+        }
+        // Scan tasks; fire any reminder whose fire time has passed but wasn't fired.
+        function checkReminders() {
+            const tasks = getTasks();
+            const now = Date.now();
+            let changed = false;
+            tasks.forEach(task => {
+                if (task.completed || !task.dueDate || !Array.isArray(task.reminders)) return;
+                const dueMs = new Date(task.dueDate).getTime();
+                if (!task.firedReminders) task.firedReminders = [];
+                task.reminders.forEach(r => {
+                    const fireAt = dueMs - reminderMs(r);
+                    const key = `${r.amount}-${r.unit}@${task.dueDate}`;
+                    if (task.firedReminders.includes(key)) return;
+                    // Fire if its time has arrived (and not absurdly long ago, > 1 day stale skipped on first load)
+                    if (fireAt <= now && now - fireAt < 86400000) {
+                        fireReminder(task, r);
+                        task.firedReminders.push(key);
+                        changed = true;
+                    } else if (fireAt <= now) {
+                        // Stale (older than a day) — mark fired silently to avoid spam.
+                        task.firedReminders.push(key);
+                        changed = true;
+                    }
+                });
+            });
+            if (changed) saveTasks(tasks);
+        }
+
+        // Periodic tick: prolong dynamic tasks + check reminders.
+        function periodicTick() {
+            const changed = prolongDynamicTasks();
+            checkReminders();
+            if (changed) { renderFilters(); renderAll(); }
+        }
 
         // ===== STATE =====
         let currentYear = new Date().getFullYear();
@@ -1078,23 +1276,68 @@
         let linearDaysVisible = 14; // Number of days to show in linear view
 
         // ===== FILTERS =====
+        // Persist sidebar expanded state + per-calendar checkbox states.
+        function getUIState() {
+            try { return JSON.parse(localStorage.getItem('habit_ui') || '{}'); } catch (_) { return {}; }
+        }
+        function saveUIState(s) { localStorage.setItem('habit_ui', JSON.stringify(s)); }
+        let sidebarExpanded = !!getUIState().sidebarExpanded;
+        function persistFilterStates() {
+            const s = getUIState();
+            s.sidebarExpanded = sidebarExpanded;
+            const filters = {};
+            document.querySelectorAll('#sidebar .filter-item').forEach(it => {
+                filters[it.dataset.colorId] = it.querySelector('input').checked;
+            });
+            s.filters = filters;
+            saveUIState(s);
+        }
         function renderFilters() {
             const sidebar = document.getElementById('sidebar');
+            const stored = getUIState().filters || {};
+            // Preserve current checkbox states across re-renders
+            const prevStates = {};
+            sidebar.querySelectorAll('.filter-item').forEach(it => {
+                prevStates[it.dataset.colorId] = it.querySelector('input').checked;
+            });
             sidebar.innerHTML = '';
+            sidebar.classList.toggle('expanded', sidebarExpanded);
+
+            const toggle = document.createElement('div');
+            toggle.id = 'sidebar-toggle';
+            toggle.textContent = sidebarExpanded ? '«' : '»';
+            toggle.title = 'Show calendar names';
+            toggle.onclick = () => { sidebarExpanded = !sidebarExpanded; persistFilterStates(); renderFilters(); };
+            sidebar.appendChild(toggle);
+
             const colors = getColors();
+            const tasks = getTasks();
             colors.forEach(c => {
                 const item = document.createElement('div');
                 item.className = 'filter-item';
                 const cb = document.createElement('input');
                 cb.type = 'checkbox';
-                cb.checked = true;
-                cb.onchange = () => renderAll();
+                cb.checked = prevStates[c.id] !== undefined ? prevStates[c.id]
+                    : (stored[c.id] !== undefined ? stored[c.id] : true);
+                cb.onchange = () => { persistFilterStates(); renderAll(); };
                 const dot = document.createElement('div');
                 dot.className = 'color-dot';
                 dot.style.background = c.color;
-                dot.onclick = () => { cb.checked = !cb.checked; renderAll(); };
+                const name = document.createElement('span');
+                name.className = 'filter-name';
+                name.textContent = c.name || '';
+                name.title = c.name || '';
+                const count = document.createElement('span');
+                count.className = 'filter-count';
+                count.textContent = tasks.filter(t => t.colorGroupId === c.id && !t.completed).length || '';
+                // Tapping anywhere on the row (except the checkbox itself) toggles it
+                item.onclick = (e) => {
+                    if (e.target !== cb) { cb.checked = !cb.checked; persistFilterStates(); renderAll(); }
+                };
                 item.appendChild(cb);
                 item.appendChild(dot);
+                item.appendChild(name);
+                item.appendChild(count);
                 item.dataset.colorId = c.id;
                 sidebar.appendChild(item);
             });
@@ -1145,7 +1388,12 @@
             const colors = getColors();
             const visibleIds = getVisibleColorIds();
 
-            for (let week = 0; week < 6; week++) {
+            // Render only the weeks the month actually spans (4, 5, or 6) so the
+            // rows can be sized to available-height / rows and always fit.
+            const lastDay = new Date(currentYear, currentMonth + 1, 0).getDate();
+            const numRows = Math.ceil((startOffset + lastDay) / 7);
+
+            for (let week = 0; week < numRows; week++) {
                 const row = document.createElement('div');
                 row.className = 'week-row';
 
@@ -1157,6 +1405,7 @@
                 }
                 grid.appendChild(row);
             }
+            grid.style.setProperty('--month-rows', numRows);
         }
 
         // Earliest reachable week: the week containing the Unix epoch (Jan 1, 1970).
@@ -1437,22 +1686,43 @@
             const events = document.createElement('div');
             events.className = 'day-events';
 
-            const dayTasks = getTasksForDate(tasks, date).filter(t => visibleIds.includes(t.colorGroupId));
-            const maxShow = 2;
+            let dayTasks = getTasksForDate(tasks, date).filter(t => visibleIds.includes(t.colorGroupId));
+            // Sort: most-used color group first, then earliest due time (spec 6).
+            const freq = colorUsageCounts();
+            dayTasks = sortByGroupThenTime(dayTasks, freq, dueTimeKey);
+
+            // How many bars fit: each lane ~15px + 2px gap; reserve a row for "+N".
+            const availH = Math.max(0, weekHeight - 28);
+            const maxShow = Math.max(1, Math.floor(availH / 17));
 
             dayTasks.slice(0, maxShow).forEach(task => {
+                const lane = document.createElement('div');
+                lane.className = 'event-lane';
                 const bar = document.createElement('div');
                 bar.className = 'event-bar';
                 const color = colors.find(c => c.id === task.colorGroupId);
-                styleEventBar(bar, color, task.type === 'continuous');
+                const isContinuous = task.type === 'continuous';
+                styleEventBar(bar, color, isContinuous);
 
-                let title = task.title;
-                if (task.type === 'dynamic' && task.postponeCount > 0) {
-                    title += ` (+${task.postponeCount}d)`;
-                }
+                // Time-proportional position on the 00:00→23:59 axis for this date.
+                const { leftPct, rightPct } = barExtentForDate(task, date, isContinuous);
+                bar.style.left = leftPct + '%';
+                bar.style.width = Math.max(2, rightPct - leftPct) + '%';
+
+                if (task.completed) bar.classList.add('done');
+
+                // Dynamic font size: scale 6px (narrow/long) → 12px (wide/short).
+                const widthFrac = (rightPct - leftPct) / 100;
+                const cellW = Math.max(20, (cell.clientWidth || 48));
+                const barPx = Math.max(8, widthFrac * cellW);
+                let title = task.title + prolongSuffix(task);
+                const fontPx = Math.max(6, Math.min(12, Math.round(barPx / Math.max(2, title.length) * 1.6)));
+                bar.style.fontSize = fontPx + 'px';
                 bar.textContent = title;
+                bar.title = title;
                 bar.onclick = (e) => { e.stopPropagation(); showTaskDetail(task); };
-                events.appendChild(bar);
+                lane.appendChild(bar);
+                events.appendChild(lane);
             });
 
             if (dayTasks.length > maxShow) {
@@ -1467,17 +1737,75 @@
             return cell;
         }
 
+        // Sort: most-used color group first (frequency = count of non-completed
+        // tasks in that group), then by earliest due time. Completed last.
+        // `freq` is a map colorGroupId -> count (computed once per render).
+        function sortByGroupThenTime(list, freq, timeKey) {
+            return list.slice().sort((a, b) => {
+                if (!!a.completed !== !!b.completed) return a.completed ? 1 : -1;
+                const fa = freq[a.colorGroupId] || 0, fb = freq[b.colorGroupId] || 0;
+                if (fb !== fa) return fb - fa;
+                const ta = timeKey(a), tb = timeKey(b);
+                if (ta == null) return 1;
+                if (tb == null) return -1;
+                return ta - tb;
+            });
+        }
+        function dueTimeKey(t) { return t.dueDate ? new Date(t.dueDate).getTime() : null; }
+
+        // Percent-of-day for a Date (0 = 00:00, 100 = 23:59).
+        function timeOfDayPct(d) {
+            return ((d.getHours() * 60 + d.getMinutes()) / 1440) * 100;
+        }
+        // Horizontal extent {leftPct,rightPct} of a task's bar on a given cell date,
+        // mapping time-of-day onto a 00:00→23:59 axis. Handles single/multi-day,
+        // continuous (from createdAt), and completed truncation at done-time.
+        function barExtentForDate(task, date, isContinuous) {
+            const dStr = formatDate(date);
+            if (isContinuous) {
+                const created = new Date(task.createdAt);
+                const completed = task.completedAt ? new Date(task.completedAt) : null;
+                let left = (formatDate(created) === dStr) ? timeOfDayPct(created) : 0;
+                let right = 100;
+                if (completed && formatDate(completed) === dStr) right = timeOfDayPct(completed);
+                return { leftPct: left, rightPct: Math.max(left + 2, right) };
+            }
+            const start = task.startDate ? new Date(task.startDate) : new Date(task.dueDate);
+            const due = new Date(task.dueDate);
+            const startStr = formatDate(start), dueStr = formatDate(due);
+            let left = 0, right = 100;
+            if (startStr === dueStr) { left = timeOfDayPct(start); right = timeOfDayPct(due); }
+            else if (dStr === startStr) { left = timeOfDayPct(start); right = 100; }
+            else if (dStr === dueStr) { left = 0; right = timeOfDayPct(due); }
+            else { left = 0; right = 100; }
+            // Completed fixed/dynamic: end the bar at done-time on the done day (spec 6.1).
+            if (task.completed && task.completedAt) {
+                const done = new Date(task.completedAt);
+                if (formatDate(done) === dStr) {
+                    const donePct = timeOfDayPct(done);
+                    right = donePct;
+                    if (left >= right) left = Math.max(0, right - 2); // point-task ends at done-time
+                }
+            }
+            return { leftPct: left, rightPct: Math.max(left + 2, right) };
+        }
+
         function getTasksForDate(tasks, date) {
             const dateStr = formatDate(date);
             return tasks.filter(task => {
-                if (task.completed && task.type !== 'continuous') return false;
                 if (task.type === 'continuous') {
                     const created = new Date(task.createdAt);
                     const completed = task.completedAt ? new Date(task.completedAt) : null;
                     return created <= date && (!completed || completed >= date);
                 }
-                const start = task.startDate ? formatDate(new Date(task.startDate)) : formatDate(new Date(task.dueDate));
-                const end = formatDate(new Date(task.dueDate));
+                let start = task.startDate ? formatDate(new Date(task.startDate)) : formatDate(new Date(task.dueDate));
+                let end = formatDate(new Date(task.dueDate));
+                // Completed fixed/dynamic tasks end at done-time: keep showing them
+                // through their done-day (spec 6.1) but not beyond.
+                if (task.completed && task.completedAt) {
+                    const doneStr = formatDate(new Date(task.completedAt));
+                    if (doneStr < end) end = doneStr;
+                }
                 return dateStr >= start && dateStr <= end;
             });
         }
@@ -1522,12 +1850,11 @@
             const activeTasks = allTasks.filter(t => !t.completed && visibleIds.includes(t.colorGroupId));
             const completedTasks = allTasks.filter(t => t.completed && visibleIds.includes(t.colorGroupId));
 
-            // Sort chronologically - earliest due date first
-            activeTasks.sort((a, b) => {
-                if (!a.dueDate) return 1;
-                if (!b.dueDate) return -1;
-                return new Date(a.dueDate) - new Date(b.dueDate);
-            });
+            // Sort by color-group frequency (most-used first), then closest end time (spec 8)
+            const freq = colorUsageCounts();
+            const sorted = sortByGroupThenTime(activeTasks, freq, dueTimeKey);
+            activeTasks.length = 0;
+            activeTasks.push(...sorted);
 
             // Sort completed by completion date (most recent first)
             completedTasks.sort((a, b) => {
@@ -1593,10 +1920,13 @@
                 const d = new Date(task.completedAt);
                 meta.textContent = 'Done ' + d.toLocaleDateString([], {month:'short', day:'numeric'});
             } else if (task.dueDate) {
-                const timeLeft = getTimeLeft(task.dueDate);
-                meta.textContent = timeLeft;
-                if (task.type === 'dynamic' && task.postponeCount > 0) {
-                    meta.textContent += ` (+${task.postponeCount}d)`;
+                const suffix = prolongSuffix(task);
+                if (suffix) {
+                    // Show the ORIGINAL date as the reference plus "(+X days)".
+                    const od = new Date(task.originalDueDate);
+                    meta.textContent = od.toLocaleDateString([], {month:'short', day:'numeric'}) + suffix;
+                } else {
+                    meta.textContent = getTimeLeft(task.dueDate);
                 }
             }
 
@@ -1699,9 +2029,18 @@
             document.getElementById('task-start').value = task && task.startDate ? formatDateTimeLocal(task.startDate) : '';
             document.getElementById('task-end').value = task && task.dueDate ? formatDateTimeLocal(task.dueDate) : defaultEnd;
             updateColorSelect(task ? task.colorGroupId : null);
+            // Restore the task's cadence, or default to D2D for new tasks
+            const cadence = (task && task.reminderType) || 'D2D';
+            document.querySelectorAll('input[name="rtype"]').forEach(r => { r.checked = r.value === cadence; });
             updateTypeVisibility();
             document.getElementById('reminders-list').innerHTML = '';
-            if (task && task.reminders) task.reminders.forEach(r => addReminderRow(r));
+            if (task && task.reminders) {
+                task.reminders.forEach(r => addReminderRow(r));
+                updateCadenceHint();
+            } else {
+                // New task: prefill the default reminder set for the cadence
+                applyCadencePresets();
+            }
             document.getElementById('task-modal').classList.add('active');
         }
 
@@ -1726,12 +2065,11 @@
             const visibleIds = getVisibleColorIds();
             const filtered = tasks.filter(t => visibleIds.includes(t.colorGroupId));
 
-            // Sort by time
-            filtered.sort((a, b) => {
-                if (!a.dueDate) return 1;
-                if (!b.dueDate) return -1;
-                return new Date(a.dueDate) - new Date(b.dueDate);
-            });
+            // Sort: most-used color group first, then earliest due time (spec 6)
+            const freq = colorUsageCounts();
+            const sortedDay = sortByGroupThenTime(filtered, freq, dueTimeKey);
+            filtered.length = 0;
+            filtered.push(...sortedDay);
 
             if (!filtered.length) {
                 events.innerHTML = '<div class="empty">No events</div>';
@@ -1764,8 +2102,7 @@
                     }
                     const titleDiv = document.createElement('div');
                     titleDiv.className = 'agenda-title';
-                    titleDiv.textContent = task.title;
-                    if (task.type === 'dynamic' && task.postponeCount > 0) titleDiv.textContent += ` (+${task.postponeCount}d)`;
+                    titleDiv.textContent = task.title + prolongSuffix(task);
                     main.appendChild(titleDiv);
 
                     const check = document.createElement('input');
@@ -1809,9 +2146,12 @@
                 add('Started: ' + new Date(task.createdAt).toLocaleDateString());
             } else if (task.dueDate) {
                 const due = new Date(task.dueDate);
-                let line = 'Due: ' + due.toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
-                if (task.type === 'dynamic' && task.postponeCount > 0 && task.originalDueDate) {
-                    line += ` — orig ${new Date(task.originalDueDate).toLocaleDateString()} (+${task.postponeCount}d)`;
+                const suffix = prolongSuffix(task);
+                let line;
+                if (suffix && task.originalDueDate) {
+                    line = 'Due: ' + new Date(task.originalDueDate).toLocaleDateString() + suffix;
+                } else {
+                    line = 'Due: ' + due.toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
                 }
                 add(line);
             }
@@ -1872,6 +2212,8 @@
         function updateColorSelect(selectedId) {
             const select = document.getElementById('task-color');
             const colors = getColors();
+            const counts = colorUsageCounts();
+            colors.forEach(c => { c.count = counts[c.id] || 0; });
             colors.sort((a, b) => (b.count || 0) - (a.count || 0));
             select.innerHTML = '';
             colors.forEach(c => {
@@ -1907,10 +2249,54 @@
             wrap.appendChild(addBtn);
         }
 
+        // Default reminder sets per cadence (spec 3.1d): each is min/hours/days/weeks before due
+        const CADENCE_PRESETS = {
+            D2D: [
+                { amount: '15', unit: 'minutes' },
+                { amount: '1', unit: 'hours' },
+                { amount: '2', unit: 'hours' },
+                { amount: '4', unit: 'hours' }
+            ],
+            W2W: [
+                { amount: '12', unit: 'hours' },
+                { amount: '1', unit: 'days' },
+                { amount: '2', unit: 'days' },
+                { amount: '3', unit: 'days' },
+                { amount: '5', unit: 'days' }
+            ],
+            M2M: [
+                { amount: '3', unit: 'days' },
+                { amount: '5', unit: 'days' },
+                { amount: '1', unit: 'weeks' },
+                { amount: '2', unit: 'weeks' },
+                { amount: '3', unit: 'weeks' }
+            ]
+        };
+
+        function getSelectedCadence() {
+            const rt = document.querySelector('input[name="rtype"]:checked');
+            return rt ? rt.value : 'D2D';
+        }
+
+        function applyCadencePresets() {
+            const list = document.getElementById('reminders-list');
+            list.innerHTML = '';
+            (CADENCE_PRESETS[getSelectedCadence()] || []).forEach(r => addReminderRow(r));
+            updateCadenceHint();
+        }
+
+        function updateCadenceHint() {
+            const type = document.getElementById('task-type').value;
+            const hints = { D2D: 'day', W2W: 'week', M2M: 'month' };
+            document.getElementById('rtype-hint').textContent = type === 'dynamic'
+                ? `Dynamic: due date auto-prolongs by 1 ${hints[getSelectedCadence()]} when missed`
+                : 'Default reminders set below — edit as needed';
+        }
+
         function updateTypeVisibility() {
             const type = document.getElementById('task-type').value;
             document.getElementById('date-group').style.display = type === 'continuous' ? 'none' : 'block';
-            document.getElementById('reminder-type-group').style.display = type === 'dynamic' ? 'block' : 'none';
+            updateCadenceHint();
         }
 
         function addReminderRow(reminder = null) {
@@ -1962,47 +2348,21 @@
                 if (startVal) task.startDate = new Date(startVal).toISOString();
                 task.dueDate = new Date(endVal).toISOString();
                 if (type === 'dynamic') {
-                    const rt = document.querySelector('input[name="rtype"]:checked');
-                    task.reminderType = rt ? rt.value : 'M2M';
                     task.originalDueDate = task.dueDate;
                     task.postponeCount = 0;
-
-                    // Auto-add reminders based on reminder type
-                    if (task.reminderType === 'D2D') {
-                        task.reminders = [
-                            { amount: '15', unit: 'minutes' },
-                            { amount: '1', unit: 'hours' },
-                            { amount: '2', unit: 'hours' },
-                            { amount: '4', unit: 'hours' }
-                        ];
-                    } else if (task.reminderType === 'W2W') {
-                        task.reminders = [
-                            { amount: '12', unit: 'hours' },
-                            { amount: '1', unit: 'days' },
-                            { amount: '2', unit: 'days' },
-                            { amount: '3', unit: 'days' },
-                            { amount: '5', unit: 'days' }
-                        ];
-                    } else if (task.reminderType === 'M2M') {
-                        task.reminders = [
-                            { amount: '3', unit: 'days' },
-                            { amount: '5', unit: 'days' },
-                            { amount: '1', unit: 'weeks' },
-                            { amount: '2', unit: 'weeks' },
-                            { amount: '3', unit: 'weeks' }
-                        ];
-                    }
                 }
             }
 
-            // Add manual reminders (if not a dynamic task with auto reminders)
-            if (type !== 'dynamic') {
-                document.querySelectorAll('.reminder-row').forEach(row => {
-                    const amount = row.querySelector('input').value;
-                    const unit = row.querySelector('select').value;
-                    if (amount) task.reminders.push({ amount, unit });
-                });
-            }
+            // Cadence applies to every task: it presets reminders and, for
+            // dynamic tasks, sets the auto-prolong step (D2D/W2W/M2M).
+            task.reminderType = getSelectedCadence();
+
+            // Reminders are taken from the visible (editable) rows for all types
+            document.querySelectorAll('.reminder-row').forEach(row => {
+                const amount = row.querySelector('input').value;
+                const unit = row.querySelector('select').value;
+                if (amount) task.reminders.push({ amount, unit });
+            });
 
             const tasks = getTasks();
             if (editingTaskId) {
@@ -2010,16 +2370,23 @@
                 if (idx >= 0) {
                     task.createdAt = tasks[idx].createdAt;
                     task.completed = tasks[idx].completed;
+                    task.completedAt = tasks[idx].completedAt || null;
+                    // Preserve fired reminder keys across edits
+                    if (tasks[idx].firedReminders) task.firedReminders = tasks[idx].firedReminders;
+                    // Keep the original date reference for dynamic tasks (spec 3.4)
+                    if (type === 'dynamic' && tasks[idx].originalDueDate) {
+                        task.originalDueDate = tasks[idx].originalDueDate;
+                        task.postponeCount = tasks[idx].postponeCount || 0;
+                    }
                     tasks[idx] = task;
                 }
             } else {
-                const colors = getColors();
-                const color = colors.find(c => c.id === colorGroupId);
-                if (color) { color.count = (color.count || 0) + 1; saveColors(colors); }
                 tasks.push(task);
             }
 
             saveTasks(tasks);
+            // Immediately auto-prolong if a dynamic task was saved already overdue.
+            prolongDynamicTasks();
             hideTaskModal();
             renderFilters();
             renderAll();
@@ -2322,6 +2689,8 @@
         document.getElementById('fab').onclick = () => showTaskModal();
         document.getElementById('add-reminder-btn').onclick = () => addReminderRow();
         document.getElementById('task-type').onchange = updateTypeVisibility;
+        // Switching cadence re-fills the reminder list with that cadence's defaults
+        document.querySelectorAll('input[name="rtype"]').forEach(r => { r.onchange = applyCadencePresets; });
         document.getElementById('save-btn').onclick = saveTask;
         document.getElementById('cancel-btn').onclick = hideTaskModal;
         document.getElementById('save-color-btn').onclick = saveColor;
@@ -2436,10 +2805,17 @@
 
         // ===== INIT =====
         syncViewportHeight();
+        // Run auto-prolong before the first render so overdue dynamic tasks land
+        // on/after today, then render.
+        prolongDynamicTasks();
         renderFilters();
         renderAll();
         // Defer week-height computation until layout has settled.
-        setTimeout(computeDefaultWeekHeight, 50);
+        setTimeout(() => { computeDefaultWeekHeight(); renderAll(); }, 50);
+        // Fire reminders shortly after load (give Notification permission a chance).
+        setTimeout(checkReminders, 1500);
+        // Once-per-minute tick: prolong dynamic tasks + check reminders.
+        setInterval(periodicTick, 30000);
     </script>
 </body>
 </html>
