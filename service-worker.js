@@ -1,37 +1,40 @@
 /**
- * Service Worker - Handles offline caching and background notifications
+ * Service Worker - Offline caching and background notifications
+ *
+ * Strategy:
+ *  - App shell (html/css/js): stale-while-revalidate from CODE_CACHE.
+ *  - manifest.json: network-first (so PWA metadata updates promptly), with cache fallback.
+ *  - Everything else (same-origin GET): cache, then network fallback.
  */
 
-const CACHE_NAME = 'habit-calendar-v1';
-const urlsToCache = [
-    '/',
-    '/index.html',
-    '/styles.css',
-    '/app.js',
-    '/storage.js',
-    '/notifications.js',
-    '/tasks.js',
-    '/calendar.js',
-    '/gestures.js',
-    '/manifest.json'
+const CACHE_VERSION = 'v2';
+const CODE_CACHE = `habit-calendar-code-${CACHE_VERSION}`;
+const RUNTIME_CACHE = `habit-calendar-runtime-${CACHE_VERSION}`;
+const ALL_CACHES = [CODE_CACHE, RUNTIME_CACHE];
+
+// App shell - every split file must be listed here.
+const PRECACHE_URLS = [
+    './',
+    './index.html',
+    './styles.css',
+    './app.js',
+    './storage.js',
+    './notifications.js',
+    './tasks.js',
+    './calendar.js',
+    './gestures.js',
+    './validation.js',
+    './manifest.json'
 ];
 
 /**
- * Install event - cache files
+ * Install - precache app shell
  */
 self.addEventListener('install', (event) => {
-    console.log('Service Worker: Installing...');
-
     event.waitUntil(
-        caches.open(CACHE_NAME)
-            .then((cache) => {
-                console.log('Service Worker: Caching files');
-                return cache.addAll(urlsToCache);
-            })
-            .then(() => {
-                console.log('Service Worker: Installed');
-                return self.skipWaiting();
-            })
+        caches.open(CODE_CACHE)
+            .then((cache) => cache.addAll(PRECACHE_URLS))
+            .then(() => self.skipWaiting())
             .catch((error) => {
                 console.error('Service Worker: Installation failed', error);
             })
@@ -39,66 +42,93 @@ self.addEventListener('install', (event) => {
 });
 
 /**
- * Activate event - clean up old caches
+ * Activate - clean up old caches
  */
 self.addEventListener('activate', (event) => {
-    console.log('Service Worker: Activating...');
-
     event.waitUntil(
         caches.keys()
-            .then((cacheNames) => {
-                return Promise.all(
-                    cacheNames.map((cacheName) => {
-                        if (cacheName !== CACHE_NAME) {
-                            console.log('Service Worker: Deleting old cache', cacheName);
-                            return caches.delete(cacheName);
-                        }
-                    })
-                );
-            })
-            .then(() => {
-                console.log('Service Worker: Activated');
-                return self.clients.claim();
-            })
+            .then((cacheNames) => Promise.all(
+                cacheNames.map((name) => {
+                    if (!ALL_CACHES.includes(name)) {
+                        return caches.delete(name);
+                    }
+                })
+            ))
+            .then(() => self.clients.claim())
     );
 });
 
 /**
- * Fetch event - serve from cache, fallback to network
+ * Stale-while-revalidate: respond from cache immediately, refresh in background.
+ */
+function staleWhileRevalidate(request, cacheName) {
+    return caches.open(cacheName).then((cache) =>
+        cache.match(request).then((cached) => {
+            const networkFetch = fetch(request)
+                .then((response) => {
+                    if (response && response.status === 200 && response.type === 'basic') {
+                        cache.put(request, response.clone());
+                    }
+                    return response;
+                })
+                .catch(() => cached);
+            return cached || networkFetch;
+        })
+    );
+}
+
+/**
+ * Network-first: try network, fall back to cache (used for manifest.json).
+ */
+function networkFirst(request, cacheName) {
+    return caches.open(cacheName).then((cache) =>
+        fetch(request)
+            .then((response) => {
+                if (response && response.status === 200) {
+                    cache.put(request, response.clone());
+                }
+                return response;
+            })
+            .catch(() => cache.match(request))
+    );
+}
+
+/**
+ * Fetch handler
  */
 self.addEventListener('fetch', (event) => {
+    const { request } = event;
+
+    // Only handle same-origin GET requests.
+    if (request.method !== 'GET') return;
+
+    const url = new URL(request.url);
+    if (url.origin !== self.location.origin) return;
+
+    const path = url.pathname;
+
+    if (path.endsWith('/manifest.json')) {
+        event.respondWith(networkFirst(request, CODE_CACHE));
+        return;
+    }
+
+    const isShell = /\.(html|css|js)$/.test(path) || path === '/' || path.endsWith('/');
+    if (isShell) {
+        event.respondWith(staleWhileRevalidate(request, CODE_CACHE));
+        return;
+    }
+
+    // Default: cache-first with network fallback into runtime cache.
     event.respondWith(
-        caches.match(event.request)
-            .then((response) => {
-                // Cache hit - return response
-                if (response) {
-                    return response;
+        caches.match(request).then((cached) =>
+            cached || fetch(request).then((response) => {
+                if (response && response.status === 200 && response.type === 'basic') {
+                    const copy = response.clone();
+                    caches.open(RUNTIME_CACHE).then((cache) => cache.put(request, copy));
                 }
-
-                // Clone the request
-                const fetchRequest = event.request.clone();
-
-                return fetch(fetchRequest).then((response) => {
-                    // Check if valid response
-                    if (!response || response.status !== 200 || response.type !== 'basic') {
-                        return response;
-                    }
-
-                    // Clone the response
-                    const responseToCache = response.clone();
-
-                    caches.open(CACHE_NAME)
-                        .then((cache) => {
-                            cache.put(event.request, responseToCache);
-                        });
-
-                    return response;
-                });
-            })
-            .catch((error) => {
-                console.error('Service Worker: Fetch failed', error);
-                // You could return a custom offline page here
-            })
+                return response;
+            }).catch(() => cached)
+        )
     );
 });
 
@@ -106,23 +136,18 @@ self.addEventListener('fetch', (event) => {
  * Notification click event
  */
 self.addEventListener('notificationclick', (event) => {
-    console.log('Notification clicked:', event.notification.tag);
-
     event.notification.close();
 
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true })
             .then((clientList) => {
-                // Check if app is already open
                 for (const client of clientList) {
-                    if (client.url === '/' && 'focus' in client) {
+                    if ('focus' in client) {
                         return client.focus();
                     }
                 }
-
-                // Open new window
                 if (clients.openWindow) {
-                    return clients.openWindow('/');
+                    return clients.openWindow('./');
                 }
             })
     );
@@ -132,11 +157,9 @@ self.addEventListener('notificationclick', (event) => {
  * Push notification event (for future server-side notifications)
  */
 self.addEventListener('push', (event) => {
-    console.log('Push notification received');
-
     let data = {};
     if (event.data) {
-        data = event.data.json();
+        try { data = event.data.json(); } catch (e) { data = {}; }
     }
 
     const title = data.title || 'HABIT Calendar';
@@ -148,16 +171,14 @@ self.addEventListener('push', (event) => {
         data: data.data || {}
     };
 
-    event.waitUntil(
-        self.registration.showNotification(title, options)
-    );
+    event.waitUntil(self.registration.showNotification(title, options));
 });
 
 /**
- * Message event - for communication with main app
+ * Message event - communication with the main app
  */
 self.addEventListener('message', (event) => {
-    console.log('Service Worker: Message received', event.data);
+    if (!event.data) return;
 
     if (event.data.type === 'SKIP_WAITING') {
         self.skipWaiting();
@@ -165,11 +186,7 @@ self.addEventListener('message', (event) => {
 
     if (event.data.type === 'CLEAR_CACHE') {
         event.waitUntil(
-            caches.delete(CACHE_NAME).then(() => {
-                console.log('Service Worker: Cache cleared');
-            })
+            Promise.all(ALL_CACHES.map((name) => caches.delete(name)))
         );
     }
 });
-
-console.log('Service Worker: Loaded');
