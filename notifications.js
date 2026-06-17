@@ -4,9 +4,107 @@
 
 class NotificationManager {
     constructor() {
-        this.permission = Notification.permission;
+        this.permission = ('Notification' in window) ? Notification.permission : 'denied';
         this.scheduledNotifications = new Map();
         this.checkInterval = null;
+
+        // localStorage keys for persistence across tab close / restart.
+        this.SCHEDULE_KEY = 'habit_calendar_scheduled_reminders';
+        this.FIRED_KEY = 'habit_calendar_fired_reminders';
+    }
+
+    /**
+     * Build a stable, unique key for a single reminder occurrence so it can be
+     * deduped (never double-fires) across replays and the periodic check.
+     */
+    reminderKey(taskId, index, fireTime) {
+        const t = (fireTime instanceof Date) ? fireTime.getTime() : new Date(fireTime).getTime();
+        return `${taskId}_${index}_${t}`;
+    }
+
+    /**
+     * Persisted schedule: array of { key, taskId, index, fireTime (ms) }.
+     */
+    loadSchedule() {
+        try {
+            return JSON.parse(localStorage.getItem(this.SCHEDULE_KEY)) || [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    saveSchedule(schedule) {
+        try {
+            localStorage.setItem(this.SCHEDULE_KEY, JSON.stringify(schedule));
+        } catch (e) {
+            console.error('Failed to persist reminder schedule', e);
+        }
+    }
+
+    /**
+     * Set of reminder keys that have already fired (dedup).
+     */
+    loadFired() {
+        try {
+            return new Set(JSON.parse(localStorage.getItem(this.FIRED_KEY)) || []);
+        } catch (e) {
+            return new Set();
+        }
+    }
+
+    saveFired(set) {
+        try {
+            // Cap the fired log so it can't grow unbounded.
+            const arr = Array.from(set).slice(-500);
+            localStorage.setItem(this.FIRED_KEY, JSON.stringify(arr));
+        } catch (e) {
+            console.error('Failed to persist fired reminders', e);
+        }
+    }
+
+    markFired(key) {
+        const fired = this.loadFired();
+        fired.add(key);
+        this.saveFired(fired);
+    }
+
+    hasFired(key) {
+        return this.loadFired().has(key);
+    }
+
+    /**
+     * Replay any reminders whose fire time passed while the app was closed.
+     * Fires each at most once (deduped), then prunes stale schedule entries.
+     * Safe to call when permission is denied (it just no-ops the display).
+     */
+    replayMissedReminders() {
+        const schedule = this.loadSchedule();
+        if (!schedule.length) return;
+
+        const now = Date.now();
+        const tasks = storage.getTasks();
+        const stillPending = [];
+
+        schedule.forEach(entry => {
+            const task = tasks.find(t => t.id === entry.taskId);
+            if (!task) return; // task deleted -> drop entry
+
+            if (entry.fireTime <= now) {
+                // Due/overdue: fire once if not already fired.
+                if (!this.hasFired(entry.key)) {
+                    this.markFired(entry.key);
+                    if (this.permission === 'granted') {
+                        const reminder = (task.reminders && task.reminders[entry.index]) || null;
+                        this.showTaskReminder(task, reminder, { missed: true });
+                    }
+                }
+                // Do not keep past entries.
+            } else {
+                stillPending.push(entry);
+            }
+        });
+
+        this.saveSchedule(stillPending);
     }
 
     /**
@@ -73,29 +171,43 @@ class NotificationManager {
      * Schedule notifications for a task
      */
     scheduleTaskNotifications(task) {
-        if (this.permission !== 'granted') return;
-
-        // Clear existing notifications for this task
+        // Clear existing notifications + persisted entries for this task.
         this.clearTaskNotifications(task.id);
 
         if (!task.reminders || task.reminders.length === 0) return;
+        if (!task.dueDate) return;
 
         const dueDate = new Date(task.dueDate);
-        const now = new Date();
+        const now = Date.now();
+
+        const schedule = this.loadSchedule();
 
         task.reminders.forEach((reminder, index) => {
             const notificationTime = this.calculateReminderTime(dueDate, reminder);
+            const fireTime = notificationTime.getTime();
+            const key = this.reminderKey(task.id, index, fireTime);
 
-            if (notificationTime > now) {
-                const timeUntil = notificationTime - now;
-                const timeoutId = setTimeout(() => {
-                    this.showTaskReminder(task, reminder);
-                }, timeUntil);
+            // Persist metadata so it can be replayed after a tab close/restart.
+            if (fireTime > now && !this.hasFired(key)) {
+                schedule.push({ key, taskId: task.id, index, fireTime });
 
-                const key = `${task.id}_${index}`;
-                this.scheduledNotifications.set(key, timeoutId);
+                // Only arm an in-memory timer when permission is granted.
+                if (this.permission === 'granted') {
+                    const timeoutId = setTimeout(() => {
+                        if (!this.hasFired(key)) {
+                            this.markFired(key);
+                            this.showTaskReminder(task, reminder);
+                            // Remove this entry from the persisted schedule.
+                            const remaining = this.loadSchedule().filter(e => e.key !== key);
+                            this.saveSchedule(remaining);
+                        }
+                    }, fireTime - now);
+                    this.scheduledNotifications.set(key, timeoutId);
+                }
             }
         });
+
+        this.saveSchedule(schedule);
     }
 
     /**
@@ -128,11 +240,11 @@ class NotificationManager {
     /**
      * Show task reminder notification
      */
-    showTaskReminder(task, reminder) {
+    showTaskReminder(task, reminder, opts = {}) {
         const dueDate = new Date(task.dueDate);
         const timeStr = this.formatTime(dueDate);
 
-        let body = `Due: ${timeStr}`;
+        let body = opts.missed ? `Missed reminder — Due: ${timeStr}` : `Due: ${timeStr}`;
         if (task.description) {
             body += `\n${task.description}`;
         }
@@ -173,26 +285,41 @@ class NotificationManager {
         const keysToDelete = [];
 
         this.scheduledNotifications.forEach((timeoutId, key) => {
-            if (key.startsWith(taskId)) {
+            if (key.startsWith(`${taskId}_`)) {
                 clearTimeout(timeoutId);
                 keysToDelete.push(key);
             }
         });
 
         keysToDelete.forEach(key => this.scheduledNotifications.delete(key));
+
+        // Drop persisted schedule entries for this task too.
+        const remaining = this.loadSchedule().filter(e => e.taskId !== taskId);
+        this.saveSchedule(remaining);
     }
 
     /**
      * Reschedule all notifications
      */
     rescheduleAll() {
-        // Clear all existing
+        // Clear all in-memory timers and the persisted schedule (rebuilt below).
         this.scheduledNotifications.forEach(timeoutId => clearTimeout(timeoutId));
         this.scheduledNotifications.clear();
+        this.saveSchedule([]);
 
         // Schedule for all active tasks
         const tasks = storage.getTasks().filter(t => !t.completed || t.type === 'continuous');
         tasks.forEach(task => this.scheduleTaskNotifications(task));
+    }
+
+    /**
+     * Init-time entry point: replay anything missed while closed, then arm
+     * future timers. Safe to call regardless of permission state.
+     */
+    initFromPersistence() {
+        // Replay first (dedup-protected), then rebuild forward-looking timers.
+        this.replayMissedReminders();
+        this.rescheduleAll();
     }
 
     /**

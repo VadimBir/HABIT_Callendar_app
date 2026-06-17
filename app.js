@@ -26,8 +26,15 @@ class HabitCalendarApp {
         const settings = storage.getSettings();
         if (settings.notificationsEnabled) {
             await notifications.requestPermission();
-            notifications.rescheduleAll();
+            // Replay any reminders missed while the app was closed, then
+            // re-arm forward-looking timers (dedup-protected so nothing
+            // double-fires). Safe even if permission was denied.
+            notifications.initFromPersistence();
             notifications.startPeriodicCheck();
+        } else {
+            // Even with notifications off, prune stale persisted schedule so
+            // it never replays unexpectedly if re-enabled later.
+            notifications.replayMissedReminders();
         }
 
         // Register service worker
