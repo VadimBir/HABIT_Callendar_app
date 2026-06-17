@@ -1,0 +1,8 @@
+node_modules/
+static/
+dist/
+android/
+.gradle/
+*.apk
+resources/maps/
+map-generator/
