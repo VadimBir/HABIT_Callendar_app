@@ -568,7 +568,7 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
 
     return html`
       <div
-        class="fixed top-0 left-0 right-0 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 z-[1001]"
+        class="fixed top-[calc(env(safe-area-inset-top,0px)+3vh)] left-0 right-0 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 z-[1001]"
         style="margin-top: ${this.barOffset}px;"
         @click=${() => this.hide()}
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}

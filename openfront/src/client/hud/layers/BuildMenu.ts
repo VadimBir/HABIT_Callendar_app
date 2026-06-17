@@ -410,6 +410,92 @@ export class BuildMenu extends LitElement implements Controller {
     this.requestUpdate();
   }
 
+  // ---- Hold-to-stack: holding a build/upgrade button accumulates a count,
+  // accelerating from a 1.0s step down to 0.25s (-0.1s per +1). Release builds
+  // that many. A quick tap falls back to the x-multiplier selector.
+  private _holdActive = false;
+  @state() private _holdUnitType: UnitType | null = null;
+  @state() private _holdCount = 1;
+  private _holdInterval = 1000;
+  private _holdTimer: ReturnType<typeof setTimeout> | null = null;
+
+  private clearHoldTimer(): void {
+    if (this._holdTimer !== null) {
+      clearTimeout(this._holdTimer);
+      this._holdTimer = null;
+    }
+  }
+
+  private startHold(buildableUnit: BuildableUnit): void {
+    if (buildableUnit.canBuild === false && buildableUnit.canUpgrade === false) {
+      return;
+    }
+    this.clearHoldTimer();
+    this._holdActive = true;
+    this._holdUnitType = buildableUnit.type;
+    this._holdCount = 1;
+    this._holdInterval = 1000;
+    this.requestUpdate();
+    this._holdTimer = setTimeout(
+      () => this.tickHold(buildableUnit),
+      this._holdInterval,
+    );
+  }
+
+  private tickHold(buildableUnit: BuildableUnit): void {
+    if (!this._holdActive) return;
+    this._holdCount += 1;
+    this._holdInterval = Math.max(250, this._holdInterval - 100);
+    this.requestUpdate();
+    this._holdTimer = setTimeout(
+      () => this.tickHold(buildableUnit),
+      this._holdInterval,
+    );
+  }
+
+  private endHold(buildableUnit: BuildableUnit): void {
+    if (!this._holdActive) return;
+    this._holdActive = false;
+    this.clearHoldTimer();
+    const n = this._holdCount > 1 ? this._holdCount : this._buildMultiplier;
+    this._holdUnitType = null;
+    this._holdCount = 1;
+    this.performBuildOrUpgradeN(buildableUnit, this.clickedTile, n);
+  }
+
+  private performBuildOrUpgradeN(
+    buildableUnit: BuildableUnit,
+    tile: TileRef,
+    n: number,
+  ): void {
+    if (buildableUnit.canUpgrade !== false) {
+      for (let i = 0; i < n; i++) {
+        this.eventBus.emit(
+          new SendUpgradeStructureIntentEvent(
+            buildableUnit.canUpgrade,
+            buildableUnit.type,
+          ),
+        );
+      }
+    } else if (buildableUnit.canBuild) {
+      const rocketDirectionUp =
+        buildableUnit.type === UnitType.AtomBomb ||
+        buildableUnit.type === UnitType.HydrogenBomb
+          ? this.uiState.rocketDirectionUp
+          : undefined;
+      this.eventBus.emit(
+        new BuildUnitIntentEvent(buildableUnit.type, tile, rocketDirectionUp),
+      );
+      if (
+        n > 1 &&
+        (Structures.types as readonly UnitType[]).includes(buildableUnit.type)
+      ) {
+        void this.placeAdditional(buildableUnit, tile, n - 1);
+      }
+    }
+    this.hideMenu();
+  }
+
   public canBuildOrUpgrade(item: BuildItemDisplay): boolean {
     if (this.game?.myPlayer() === null || this.playerBuildables === null) {
       return false;
@@ -576,8 +662,10 @@ export class BuildMenu extends LitElement implements Controller {
                 return html`
                   <button
                     class="build-button"
-                    @click=${() =>
-                      this.sendBuildOrUpgrade(buildableUnit, this.clickedTile)}
+                    @pointerdown=${() => this.startHold(buildableUnit)}
+                    @pointerup=${() => this.endHold(buildableUnit)}
+                    @pointerleave=${() => this.endHold(buildableUnit)}
+                    @pointercancel=${() => this.endHold(buildableUnit)}
                     ?disabled=${!enabled}
                     title=${!enabled
                       ? translateText("build_menu.not_enough_money")
@@ -613,6 +701,16 @@ export class BuildMenu extends LitElement implements Controller {
                           <span class="build-count">${this.count(item)}</span>
                         </div>`
                       : ""}
+                    ${this._holdActive &&
+                    this._holdUnitType === item.unitType &&
+                    this._holdCount > 1
+                      ? html`<div
+                          class="build-count-chip"
+                          style="background:#16a34a;left:2px;right:auto"
+                        >
+                          <span class="build-count">×${this._holdCount}</span>
+                        </div>`
+                      : ""}
                   </button>
                 `;
               })}
@@ -625,6 +723,8 @@ export class BuildMenu extends LitElement implements Controller {
 
   hideMenu() {
     this._hidden = true;
+    this._holdActive = false;
+    this.clearHoldTimer();
     this.requestUpdate();
   }
 
