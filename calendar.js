@@ -386,17 +386,14 @@ class CalendarManager {
      * Check if date is today
      */
     isToday(date) {
-        const today = new Date();
-        return this.isSameDay(date, today);
+        return storage.isSameLocalDay(date, new Date());
     }
 
     /**
-     * Check if two dates are the same day
+     * Check if two dates are the same local day (timezone-safe)
      */
     isSameDay(date1, date2) {
-        return date1.getFullYear() === date2.getFullYear() &&
-               date1.getMonth() === date2.getMonth() &&
-               date1.getDate() === date2.getDate();
+        return storage.isSameLocalDay(date1, date2);
     }
 
     /**

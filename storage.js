@@ -169,28 +169,29 @@ class StorageManager {
      */
     getTasksForDate(date) {
         const tasks = this.getTasks();
-        const dateStr = this.formatDate(date);
+        // Normalize the target day to local midnight once.
+        const dayStart = this.getDateAtMidnight(date);
 
         return tasks.filter(task => {
             if (task.completed && task.type !== 'continuous') return false;
 
             if (task.type === 'continuous') {
-                // Show continuous tasks if not completed or completed on this date
-                const createdDate = new Date(task.createdAt);
-                const completedDate = task.completedAt ? new Date(task.completedAt) : null;
+                // Show continuous tasks from their creation day onward (until
+                // completed). Compare on local-day boundaries.
+                const createdDay = this.getDateAtMidnight(task.createdAt);
+                const completedDay = task.completedAt ? this.getDateAtMidnight(task.completedAt) : null;
 
-                return createdDate <= date && (!completedDate || completedDate >= date);
+                return createdDay.getTime() <= dayStart.getTime() &&
+                       (!completedDay || completedDay.getTime() >= dayStart.getTime());
             }
 
             if (task.type === 'fixed' || task.type === 'dynamic') {
-                const taskStartDate = task.startDate ? new Date(task.startDate) : new Date(task.dueDate);
-                const taskDueDate = new Date(task.dueDate);
+                const taskStartDay = this.getDateAtMidnight(task.startDate || task.dueDate);
+                const taskDueDay = this.getDateAtMidnight(task.dueDate);
 
-                // Check if date is within task range
-                const startDateStr = this.formatDate(taskStartDate);
-                const dueDateStr = this.formatDate(taskDueDate);
-
-                return dateStr >= startDateStr && dateStr <= dueDateStr;
+                // Inclusive range check on local-day boundaries.
+                return dayStart.getTime() >= taskStartDay.getTime() &&
+                       dayStart.getTime() <= taskDueDay.getTime();
             }
 
             return false;
@@ -358,11 +359,34 @@ class StorageManager {
      * Utility Functions
      */
     formatDate(date) {
-        const d = new Date(date);
+        // Build the local-day key from local fields so a task at e.g. 23:30
+        // is keyed to its local day, not shifted by UTC conversion.
+        const d = this.getDateAtMidnight(date);
         const year = d.getFullYear();
         const month = String(d.getMonth() + 1).padStart(2, '0');
         const day = String(d.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
+    }
+
+    /**
+     * Return a new Date set to local midnight (00:00:00.000) of the given date.
+     * Timezone-safe: uses local fields, so midnight-boundary tasks land on the
+     * correct local day regardless of UTC offset / DST.
+     */
+    getDateAtMidnight(date) {
+        const d = new Date(date);
+        return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    }
+
+    /**
+     * True if a and b fall on the same local calendar day.
+     */
+    isSameLocalDay(a, b) {
+        const da = new Date(a);
+        const db = new Date(b);
+        return da.getFullYear() === db.getFullYear() &&
+               da.getMonth() === db.getMonth() &&
+               da.getDate() === db.getDate();
     }
 
     formatDateTime(date) {
