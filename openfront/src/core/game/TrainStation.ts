@@ -38,11 +38,30 @@ class TradeStationStopHandler implements TrainStopHandler {
 }
 
 class FactoryStopHandler implements TrainStopHandler {
+  // Stream B: mirror TradeStationStopHandler — grant trainGold() to the train
+  // owner (and station owner if different) and record the stats.
   onStop(
     mg: Game,
     station: TrainStation,
     trainExecution: TrainExecution,
-  ): void {}
+  ): void {
+    const stationOwner = station.unit.owner();
+    const trainOwner = trainExecution.owner();
+    const gold = mg
+      .config()
+      .trainGold(
+        rel(trainOwner, stationOwner),
+        trainExecution.tradeStopsVisited(),
+        trainOwner,
+      );
+    // Share revenue with the station owner if it's not the current player
+    if (trainOwner !== stationOwner) {
+      stationOwner.addGold(gold, station.tile());
+      mg.stats().trainExternalTrade(stationOwner, gold);
+    }
+    trainOwner.addGold(gold, station.tile());
+    mg.stats().trainSelfTrade(trainOwner, gold);
+  }
 }
 
 export function createTrainStopHandlers(

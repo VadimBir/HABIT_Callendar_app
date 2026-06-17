@@ -60,6 +60,10 @@ function getStructureRatios(
       ratioPerCity: 0.2,
       perceivedCostIncreasePerOwned: 1,
     },
+    [UnitType.ArtilleryPost]: {
+      ratioPerCity: 0.2,
+      perceivedCostIncreasePerOwned: 0.3,
+    },
   };
 }
 
@@ -470,6 +474,7 @@ export class NationStructureBehavior {
       UnitType.Factory,
       UnitType.SAMLauncher,
       UnitType.MissileSilo,
+      UnitType.ArtilleryPost,
     ];
 
     const nukesEnabled =
@@ -880,6 +885,8 @@ export class NationStructureBehavior {
         return this.portValue();
       case UnitType.SAMLauncher:
         return this.samLauncherValue();
+      case UnitType.ArtilleryPost:
+        return this.artilleryPostValue();
       default:
         throw new Error(`Value function not implemented for ${type}`);
     }
@@ -1313,6 +1320,38 @@ export class NationStructureBehavior {
             w += structureSpacing * entry.weight;
           }
         }
+      }
+
+      return w;
+    };
+  }
+
+  /**
+   * Value function for artillery posts.
+   * Artillery posts fire at nearby enemies, so they prefer to be close to the
+   * border (offensive reach) while keeping spacing from other artillery posts.
+   */
+  private artilleryPostValue(): (tile: TileRef) => number {
+    const game = this.game;
+    const player = this.player;
+    const borderTiles = player.borderTiles();
+    const otherUnits = player.units(UnitType.ArtilleryPost);
+    const { borderSpacing, structureSpacing } = this.spacingConstants();
+
+    return (tile) => {
+      let w = 0;
+
+      // Prefer to be close to the border (closer => higher score).
+      const [, closestBorderDist] = closestTile(game, borderTiles, tile);
+      w += Math.max(0, borderSpacing - Math.min(closestBorderDist, borderSpacing));
+
+      // Prefer to be away from other artillery posts.
+      const otherTiles: Set<TileRef> = new Set(otherUnits.map((u) => u.tile()));
+      otherTiles.delete(tile);
+      const closestOther = closestTwoTiles(game, otherTiles, [tile]);
+      if (closestOther !== null) {
+        const d = game.manhattanDist(closestOther.x, tile);
+        w += Math.min(d, structureSpacing);
       }
 
       return w;

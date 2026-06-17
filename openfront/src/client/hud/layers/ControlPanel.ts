@@ -11,6 +11,7 @@ import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { Controller } from "../../Controller";
 import { AttackRatioEvent } from "../../InputHandler";
+import { SetTroopRatioEvent, SetAutopilotEvent } from "../../Transport";
 import { UIState } from "../../UIState";
 import {
   getGamesPlayed,
@@ -607,6 +608,68 @@ export class ControlPanel extends LitElement implements Controller {
     `;
   }
 
+  @state()
+  private _autopilotEnabled: boolean = false;
+  @state()
+  private _troopRatio0: number = 34;
+  @state()
+  private _troopRatio1: number = 33;
+
+  private toggleAutopilot() {
+    this._autopilotEnabled = !this._autopilotEnabled;
+    this.eventBus.emit(new SetAutopilotEvent(this._autopilotEnabled));
+  }
+
+  private emitTroopRatio() {
+    // clamp so r0 + r1 <= 100 (r2 = remainder)
+    if (this._troopRatio0 + this._troopRatio1 > 100) {
+      this._troopRatio1 = 100 - this._troopRatio0;
+    }
+    this.eventBus.emit(
+      new SetTroopRatioEvent(this._troopRatio0 / 100, this._troopRatio1 / 100),
+    );
+  }
+
+  private onTroop0(e: Event) {
+    this._troopRatio0 = Number((e.target as HTMLInputElement).value);
+    this.emitTroopRatio();
+  }
+
+  private onTroop1(e: Event) {
+    this._troopRatio1 = Number((e.target as HTMLInputElement).value);
+    this.emitTroopRatio();
+  }
+
+  private renderModPanel() {
+    const r2 = Math.max(0, 100 - this._troopRatio0 - this._troopRatio1);
+    return html`
+      <div class="mt-1 pt-1 border-t border-white/20 flex flex-col gap-1" translate="no">
+        <button
+          @click=${() => this.toggleAutopilot()}
+          class="w-full rounded px-2 py-1 text-xs font-bold ${this
+            ._autopilotEnabled
+            ? "bg-green-600 text-white"
+            : "bg-gray-600 text-gray-200"}"
+        >
+          ${this._autopilotEnabled ? "Autopilot: ON" : "Autopilot: OFF"}
+        </button>
+        <div class="flex items-center gap-1 text-[10px]">
+          <span class="w-8 text-red-400">T1 ${this._troopRatio0}</span>
+          <input type="range" min="0" max="100" .value=${String(this._troopRatio0)}
+            @input=${(e: Event) => this.onTroop0(e)}
+            class="flex-1 h-1.5 accent-red-500 cursor-pointer" />
+        </div>
+        <div class="flex items-center gap-1 text-[10px]">
+          <span class="w-8 text-green-400">T2 ${this._troopRatio1}</span>
+          <input type="range" min="0" max="100" .value=${String(this._troopRatio1)}
+            @input=${(e: Event) => this.onTroop1(e)}
+            class="flex-1 h-1.5 accent-green-500 cursor-pointer" />
+        </div>
+        <div class="text-[10px] text-blue-400">T3 ${r2} (auto)</div>
+      </div>
+    `;
+  }
+
   render() {
     return html`
       <style>
@@ -632,6 +695,7 @@ export class ControlPanel extends LitElement implements Controller {
       >
         <div class="lg:hidden">${this.renderMobile()}</div>
         <div class="hidden lg:block">${this.renderDesktop()}</div>
+        ${this.renderModPanel()}
       </div>
     `;
   }

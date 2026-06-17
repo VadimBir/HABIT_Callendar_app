@@ -1,4 +1,6 @@
 import { Execution, Game } from "../game/Game";
+import { SetTroopRatioExecution } from "./SetTroopRatioExecution";
+import { AutopilotExecution } from "./AutopilotExecution";
 import { PseudoRandom } from "../PseudoRandom";
 import { ClientID, GameID, StampedIntent, Turn } from "../Schemas";
 import { simpleHash } from "../Util";
@@ -121,6 +123,10 @@ export class Executor {
         return new MarkDisconnectedExecution(player, intent.isDisconnected);
       case "toggle_pause":
         return new PauseExecution(player, intent.paused);
+      case "set_troop_ratio":
+        return new SetTroopRatioExecution(player, intent.ratio0, intent.ratio1);
+      case "set_autopilot":
+        return new AutopilotExecution(player, intent.enabled);
       default:
         throw new Error(`intent type ${intent} not found`);
     }

@@ -34,8 +34,9 @@ export interface GameUpdateViewData {
    */
   packedMotionPlans?: Uint32Array;
   /**
-   * Packed per-player numeric stats as `[smallID, tilesOwned, gold, troops]`
-   * float64 quads — the fields that change for nearly every alive player
+   * Packed per-player numeric stats as
+   * `[smallID, tilesOwned, gold, troopsT1, troopsT2, troopsT3, troopsTotal]`
+   * float64 7-tuples — the fields that change for nearly every alive player
    * every tick. They travel here (transferred, not structured-cloned) instead
    * of in `PlayerUpdate` object diffs, which only carry them on a player's
    * first emission. Gold is exact in a float64 (game values stay far below
@@ -229,6 +230,11 @@ export interface PlayerUpdate {
   tilesOwned?: number;
   gold?: Gold;
   troops?: number;
+  // Stream B: per-type troop counts. Carried on the first (full) emission and
+  // via the packedPlayerUpdates 7-float tuple thereafter (like troops).
+  troopsT1?: number;
+  troopsT2?: number;
+  troopsT3?: number;
   allies?: number[];
   embargoes?: Set<PlayerID>;
   isTraitor?: boolean;

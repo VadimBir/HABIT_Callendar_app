@@ -60,6 +60,10 @@ export interface PlayerState {
   tilesOwned: number;
   gold: number;
   troops: number;
+  // Stream B: per-type troop counts (T1/T2/T3); troops stays the total.
+  troopsT1: number;
+  troopsT2: number;
+  troopsT3: number;
   isTraitor: boolean;
   traitorRemainingTicks: number;
   betrayals: number;

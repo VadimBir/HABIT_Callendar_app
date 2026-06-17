@@ -105,6 +105,15 @@ export const buildTable: BuildItemDisplay[][] = [
       countable: true,
     },
     {
+      // NOTE: placeholder icon — reuses the shield/defense-post SVG.
+      // A dedicated ArtilleryPost asset should replace this (see DESIGN.md).
+      unitType: UnitType.ArtilleryPost,
+      icon: shieldIcon,
+      description: "build_menu.desc.artillery_post",
+      key: "unit_type.artillery_post",
+      countable: true,
+    },
+    {
       unitType: UnitType.City,
       icon: cityIcon,
       description: "build_menu.desc.city",

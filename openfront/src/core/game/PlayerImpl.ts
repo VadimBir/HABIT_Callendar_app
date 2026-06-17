@@ -35,6 +35,8 @@ import {
   Team,
   TerraNullius,
   Tick,
+  TroopClass,
+  troopClassCounters,
   Unit,
   UnitParams,
   UnitType,
@@ -96,6 +98,10 @@ export class PlayerImpl implements Player {
 
   private _gold: bigint;
   private _troops: bigint;
+  // Stream B: per-type troop storage. Sum equals _troops (kept in sync).
+  private _troopsByType: [bigint, bigint, bigint] = [0n, 0n, 0n];
+  // Per-player growth ratio across the 3 troop types (sums to 1).
+  private _troopRatio: [number, number, number] = [1, 0, 0];
 
   markedTraitorTick = -1;
   private _betrayalCount: number = 0;
@@ -146,6 +152,7 @@ export class PlayerImpl implements Player {
     private readonly _team: Team | null,
   ) {
     this._troops = toInt(startTroops);
+    this._troopsByType[TroopClass.T1] = this._troops;
     this._gold = mg.config().startingGold(playerInfo);
     this._pseudo_random = new PseudoRandom(simpleHash(this.playerInfo.id));
   }
@@ -161,7 +168,8 @@ export class PlayerImpl implements Player {
    *
    * tilesOwned / gold / troops are excluded from partial updates (they churn
    * for every alive player every tick): when any of them changed, a
-   * `[smallID, tilesOwned, gold, troops]` quad is pushed to `statsOut`
+   * `[smallID, tilesOwned, gold, troopsT1, troopsT2, troopsT3, troopsTotal]`
+   * 7-float tuple is pushed to `statsOut`
    * instead, which GameImpl drains into the transferable
    * `packedPlayerUpdates` buffer. Attack troop counts likewise go to
    * `attackTroopsOut` as `[smallID, direction, index, troops]` quads
@@ -187,6 +195,9 @@ export class PlayerImpl implements Player {
         full.smallID!,
         full.tilesOwned!,
         Number(full.gold),
+        full.troopsT1!,
+        full.troopsT2!,
+        full.troopsT3!,
         full.troops!,
       );
     }
@@ -311,6 +322,9 @@ export class PlayerImpl implements Player {
       tilesOwned: this.numTilesOwned(),
       gold: this._gold,
       troops: this.troops(),
+      troopsT1: this.troopsByType(TroopClass.T1),
+      troopsT2: this.troopsByType(TroopClass.T2),
+      troopsT3: this.troopsByType(TroopClass.T3),
       allies: allies,
       embargoes: embargoes,
       isTraitor: this.isTraitor(),
@@ -548,7 +562,26 @@ export class PlayerImpl implements Player {
     return true as const;
   }
   setTroops(troops: number) {
-    this._troops = toInt(troops);
+    const target = toInt(troops);
+    if (target <= 0n) {
+      this._troops = target < 0n ? 0n : target;
+      this._troopsByType = [0n, 0n, 0n];
+      this._troops = 0n;
+      return;
+    }
+    if (this._troops > 0n) {
+      // Preserve the existing type distribution proportionally.
+      let assigned = 0n;
+      for (let t = 0; t < 3; t++) {
+        const v = (target * this._troopsByType[t]) / this._troops;
+        this._troopsByType[t] = v;
+        assigned += v;
+      }
+      this._troopsByType[TroopClass.T1] += target - assigned;
+    } else {
+      this._troopsByType = [target, 0n, 0n];
+    }
+    this._troops = target;
   }
   conquer(tile: TileRef) {
     this.mg.conquer(this, tile);
@@ -1139,18 +1172,74 @@ export class PlayerImpl implements Player {
     return Number(this._troops);
   }
 
-  addTroops(troops: number): void {
+  // Stream B: troops of a specific class.
+  troopsByType(type: TroopClass): number {
+    return Number(this._troopsByType[type]);
+  }
+
+  troopRatio(): readonly [number, number, number] {
+    return this._troopRatio;
+  }
+
+  // Stream B: argmax over the three troop pools (defaults to T1 on ties/empty).
+  effectiveTroopClass(): TroopClass {
+    let best = TroopClass.T1;
+    let bestVal = this._troopsByType[TroopClass.T1];
+    if (this._troopsByType[TroopClass.T2] > bestVal) {
+      best = TroopClass.T2;
+      bestVal = this._troopsByType[TroopClass.T2];
+    }
+    if (this._troopsByType[TroopClass.T3] > bestVal) {
+      best = TroopClass.T3;
+    }
+    return best;
+  }
+
+  // Stream B: set the growth ratio; r2 is derived. Clamped & normalized.
+  setTroopRatio(r0: number, r1: number): void {
+    r0 = Math.max(0, Math.min(1, r0));
+    r1 = Math.max(0, Math.min(1, r1));
+    if (r0 + r1 > 1) {
+      const s = r0 + r1;
+      r0 /= s;
+      r1 /= s;
+    }
+    const r2 = 1 - r0 - r1;
+    this._troopRatio = [r0, r1, r2 < 0 ? 0 : r2];
+  }
+
+  addTroops(troops: number, type: TroopClass = TroopClass.T1): void {
     if (troops < 0) {
       this.removeTroops(-1 * troops);
       return;
     }
-    this._troops += toInt(troops);
+    const add = toInt(troops);
+    this._troops += add;
+    this._troopsByType[type] += add;
   }
   removeTroops(troops: number): number {
     if (troops <= 0) {
       return 0;
     }
     const toRemove = minInt(this._troops, toInt(troops));
+    // Spread the removal proportionally across the three pools.
+    if (this._troops > 0n) {
+      let removed = 0n;
+      for (let t = 0; t < 3; t++) {
+        const share =
+          (toRemove * this._troopsByType[t]) / this._troops;
+        const r = minInt(this._troopsByType[t], share);
+        this._troopsByType[t] -= r;
+        removed += r;
+      }
+      // Distribute any rounding remainder to whichever pool still has troops.
+      let remainder = toRemove - removed;
+      for (let t = 0; t < 3 && remainder > 0n; t++) {
+        const r = minInt(this._troopsByType[t], remainder);
+        this._troopsByType[t] -= r;
+        remainder -= r;
+      }
+    }
     this._troops -= toRemove;
     return Number(toRemove);
   }
@@ -1371,6 +1460,7 @@ export class PlayerImpl implements Player {
         return this.landBasedUnitSpawn(targetTile);
       case UnitType.MissileSilo:
       case UnitType.DefensePost:
+      case UnitType.ArtilleryPost:
       case UnitType.SAMLauncher:
       case UnitType.City:
       case UnitType.Factory:

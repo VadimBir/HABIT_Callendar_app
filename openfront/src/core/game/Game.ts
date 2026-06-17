@@ -179,12 +179,26 @@ export enum UnitType {
   MIRVWarhead = "MIRV Warhead",
   Train = "Train",
   Factory = "Factory",
+  ArtilleryPost = "Artillery Post",
 }
 
 export enum TrainType {
   Engine = "Engine",
   TailEngine = "TailEngine",
   Carriage = "Carriage",
+}
+
+// Stream B: three troop types with a rock-paper-scissors counter relation.
+// T1 beats T2, T2 beats T3, T3 beats T1. Winner gets a x1.66 combat advantage.
+export enum TroopClass {
+  T1 = 0,
+  T2 = 1,
+  T3 = 2,
+}
+
+// Returns true if class `a` counters class `b` (a beats b).
+export function troopClassCounters(a: TroopClass, b: TroopClass): boolean {
+  return (a + 1) % 3 === b;
 }
 
 export const Nukes = unitTypeGroup([
@@ -208,6 +222,7 @@ export const Structures = unitTypeGroup([
   UnitType.MissileSilo,
   UnitType.Port,
   UnitType.Factory,
+  UnitType.ArtilleryPost,
 ] as const);
 
 export const BuildMenus = unitTypeGroup([
@@ -272,6 +287,7 @@ export interface UnitParamsMap {
   [UnitType.MissileSilo]: Record<string, never>;
 
   [UnitType.DefensePost]: Record<string, never>;
+  [UnitType.ArtilleryPost]: Record<string, never>;
 
   [UnitType.SAMLauncher]: Record<string, never>;
 
@@ -562,6 +578,12 @@ export interface Player {
   setTroops(troops: number): void;
   addTroops(troops: number): void;
   removeTroops(troops: number): number;
+  // Stream B: three troop types.
+  troopsByType(type: TroopClass): number;
+  addTroops(troops: number, type?: TroopClass): void;
+  setTroopRatio(r0: number, r1: number): void;
+  troopRatio(): readonly [number, number, number];
+  effectiveTroopClass(): TroopClass;
 
   // Units
   units(...types: UnitType[]): Unit[];

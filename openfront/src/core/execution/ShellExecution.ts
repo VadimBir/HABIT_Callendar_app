@@ -17,6 +17,8 @@ export class ShellExecution implements Execution {
     private _owner: Player,
     private ownerUnit: Unit,
     private target: Unit,
+    // Optional damage multiplier (default 1.0 so existing callers are unaffected).
+    private damageMultiplier: number = 1.0,
   ) {}
 
   init(mg: Game, ticks: number): void {
@@ -69,7 +71,9 @@ export class ShellExecution implements Execution {
     const roll = this.random.nextInt(1, 6);
     const damageMultiplier = (roll - 1) * 25 + 200;
 
-    return Math.round((baseDamage / 250) * damageMultiplier);
+    return Math.round(
+      (baseDamage / 250) * damageMultiplier * this.damageMultiplier,
+    );
   }
 
   public getEffectOnTargetForTesting(): number {

@@ -1,6 +1,7 @@
 import { Execution, Game, Player, Tick, Unit, UnitType } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { CityExecution } from "./CityExecution";
+import { ArtilleryPostExecution } from "./ArtilleryPostExecution";
 import { DefensePostExecution } from "./DefensePostExecution";
 import { FactoryExecution } from "./FactoryExecution";
 import { MirvExecution } from "./MIRVExecution";
@@ -133,6 +134,9 @@ export class ConstructionExecution implements Execution {
       case UnitType.DefensePost:
         this.mg.addExecution(new DefensePostExecution(this.structure!));
         break;
+      case UnitType.ArtilleryPost:
+        this.mg.addExecution(new ArtilleryPostExecution(this.structure!));
+        break;
       case UnitType.SAMLauncher:
         this.mg.addExecution(
           new SAMLauncherExecution(player, null, this.structure!),
@@ -157,6 +161,7 @@ export class ConstructionExecution implements Execution {
       case UnitType.Port:
       case UnitType.MissileSilo:
       case UnitType.DefensePost:
+      case UnitType.ArtilleryPost:
       case UnitType.SAMLauncher:
       case UnitType.City:
       case UnitType.Factory:

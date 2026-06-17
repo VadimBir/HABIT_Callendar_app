@@ -178,6 +178,19 @@ export class SendToggleGameStartTimer implements GameEvent {
   constructor() {}
 }
 
+// Stream B: set the growth ratio across the 3 troop types (r2 = 1 - r0 - r1).
+export class SetTroopRatioEvent implements GameEvent {
+  constructor(
+    public readonly ratio0: number,
+    public readonly ratio1: number,
+  ) {}
+}
+
+// Toggle autopilot (AI plays on behalf of the human player).
+export class SetAutopilotEvent implements GameEvent {
+  constructor(public readonly enabled: boolean) {}
+}
+
 export class Transport {
   private socket: WebSocket | null = null;
 
@@ -271,6 +284,24 @@ export class Transport {
     this.eventBus.on(SendToggleGameStartTimer, (e) =>
       this.onSendToggleGameStartTimer(e),
     );
+
+    this.eventBus.on(SetTroopRatioEvent, (e) => this.onSetTroopRatio(e));
+    this.eventBus.on(SetAutopilotEvent, (e) => this.onSetAutopilot(e));
+  }
+
+  private onSetTroopRatio(event: SetTroopRatioEvent) {
+    this.sendIntent({
+      type: "set_troop_ratio",
+      ratio0: event.ratio0,
+      ratio1: event.ratio1,
+    });
+  }
+
+  private onSetAutopilot(event: SetAutopilotEvent) {
+    this.sendIntent({
+      type: "set_autopilot",
+      enabled: event.enabled,
+    });
   }
 
   private startPing() {

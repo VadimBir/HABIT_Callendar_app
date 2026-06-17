@@ -13,6 +13,7 @@ import {
   TerrainType,
   TerraNullius,
   Tick,
+  troopClassCounters,
   UnitInfo,
   UnitType,
 } from "../game/Game";
@@ -144,11 +145,23 @@ export class Config {
   }
 
   defensePostRange(): number {
-    return 30;
+    return 300;
   }
 
-  defensePostDefenseBonus(): number {
-    return 5;
+  // Level-scaled defense bonus: 5 * 1.5^(level-1).
+  // Default level 1 => 5 (backward compatible with the old constant).
+  defensePostDefenseBonus(level: number = 1): number {
+    return 5 * Math.pow(1.5, level - 1);
+  }
+
+  // Fire rate (in ticks) for the ArtilleryPost structure.
+  artilleryShellAttackRate(): number {
+    return 20;
+  }
+
+  // Damage multiplier applied to artillery shells (vs base Shell damage).
+  artilleryDamageMultiplier(): number {
+    return 1.5;
   }
 
   defensePostSpeedBonus(): number {
@@ -210,7 +223,8 @@ export class Config {
   trainSpawnRate(numPlayerFactories: number): number {
     // hyperbolic decay, midpoint at 10 factories
     // expected number of trains = numPlayerFactories  / trainSpawnRate(numPlayerFactories)
-    return (numPlayerFactories + 10) * 15;
+    // Stream B: halved to double train spawn frequency.
+    return (numPlayerFactories + 10) * 7.5;
   }
   trainGold(
     rel: "self" | "team" | "ally" | "other",
@@ -363,13 +377,24 @@ export class Config {
             UnitType.DefensePost,
           ),
           constructionDuration: this.instantBuild() ? 0 : 5 * 10,
+          upgradable: true,
+        };
+        break;
+      case UnitType.ArtilleryPost:
+        info = {
+          cost: this.costWrapper(
+            (numUnits: number) => Math.min(300_000, (numUnits + 1) * 60_000),
+            UnitType.ArtilleryPost,
+          ),
+          constructionDuration: this.instantBuild() ? 0 : 5 * 10,
+          upgradable: true,
         };
         break;
       case UnitType.SAMLauncher:
         info = {
           cost: this.costWrapper(
             (numUnits: number) =>
-              Math.min(3_000_000, (numUnits + 1) * 1_500_000),
+              Math.min(1_500_000, (numUnits + 1) * 750_000),
             UnitType.SAMLauncher,
           ),
           constructionDuration: this.instantBuild()
@@ -598,7 +623,7 @@ export class Config {
         UnitType.DefensePost,
       )) {
         if (dp.unit.owner() === defender) {
-          mag *= this.defensePostDefenseBonus();
+          mag *= this.defensePostDefenseBonus(dp.unit.level());
           speed *= this.defensePostSpeedBonus();
           break;
         }
@@ -657,12 +682,26 @@ export class Config {
         traitorMod;
       const altAttackerLoss =
         1.3 * defenderTroopLoss * (mag / 100) * traitorMod;
-      const attackerTroopLoss =
+      let attackerTroopLoss =
         0.6 * currentAttackerLoss + 0.4 * altAttackerLoss;
+
+      // Stream B: rock-paper-scissors troop-type advantage (x1.66 / x0.602).
+      let scaledDefenderTroopLoss = defenderTroopLoss;
+      if (attacker.isPlayer() && defender.isPlayer()) {
+        const aClass = attacker.effectiveTroopClass();
+        const dClass = defender.effectiveTroopClass();
+        if (troopClassCounters(aClass, dClass)) {
+          scaledDefenderTroopLoss *= 1.66;
+          attackerTroopLoss *= 0.602;
+        } else if (troopClassCounters(dClass, aClass)) {
+          scaledDefenderTroopLoss *= 0.602;
+          attackerTroopLoss *= 1.66;
+        }
+      }
 
       return {
         attackerTroopLoss,
-        defenderTroopLoss,
+        defenderTroopLoss: scaledDefenderTroopLoss,
         tilesPerTickUsed:
           within(defender.troops() / (5 * attackTroops), 0.2, 1.5) *
           speed *
@@ -826,7 +865,18 @@ export class Config {
     } else {
       baseRate = 100n;
     }
-    return BigInt(Math.floor(Number(baseRate) * multiplier));
+    // Stream B: structure income synergy. unitCount returns the SUM of levels.
+    // unitCount only exists on the sim-side Player (not PlayerView); income is
+    // only ever computed sim-side, so guard for type-safety.
+    const factoryLevelSum =
+      "unitCount" in player ? player.unitCount(UnitType.Factory) : 0;
+    const portLevelSum =
+      "unitCount" in player ? player.unitCount(UnitType.Port) : 0;
+    const structureMultiplier =
+      Math.pow(1.1, factoryLevelSum) * Math.pow(1.5, portLevelSum);
+    return BigInt(
+      Math.floor(Number(baseRate) * multiplier * structureMultiplier),
+    );
   }
 
   nukeMagnitudes(unitType: UnitType): NukeMagnitude {
@@ -854,16 +904,17 @@ export class Config {
   }
 
   defaultSamRange(): number {
-    return 70;
+    return 700;
   }
 
   samRange(level: number): number {
-    // rational growth function (level 1 = 70, level 5 just above hydro range, asymptotically approaches 150)
-    return this.maxSamRange() - 480 / (level + 5);
+    // rational growth function, scaled ×10 from the original tuning.
+    // level 1 = 700, monotonically increasing, asymptotically approaches maxSamRange (1500).
+    return this.maxSamRange() - 4800 / (level + 5);
   }
 
   maxSamRange(): number {
-    return 150;
+    return 1500;
   }
 
   defaultSamMissileSpeed(): number {

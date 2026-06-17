@@ -51,8 +51,12 @@ export type Intent =
   | KickPlayerIntent
   | TogglePauseIntent
   | UpdateGameConfigIntent
-  | ToggleGameStartTimer;
+  | ToggleGameStartTimer
+  | SetTroopRatioIntent
+  | SetAutopilotIntent;
 
+export type SetTroopRatioIntent = z.infer<typeof SetTroopRatioIntentSchema>;
+export type SetAutopilotIntent = z.infer<typeof SetAutopilotIntentSchema>;
 export type AttackIntent = z.infer<typeof AttackIntentSchema>;
 export type CancelAttackIntent = z.infer<typeof CancelAttackIntentSchema>;
 export type SpawnIntent = z.infer<typeof SpawnIntentSchema>;
@@ -488,7 +492,20 @@ export const ToggleGameStartTimerIntentSchema = z.object({
   type: z.literal("toggle_game_start_timer"),
 });
 
+export const SetTroopRatioIntentSchema = z.object({
+  type: z.literal("set_troop_ratio"),
+  ratio0: z.number(),
+  ratio1: z.number(),
+});
+
+export const SetAutopilotIntentSchema = z.object({
+  type: z.literal("set_autopilot"),
+  enabled: z.boolean(),
+});
+
 const IntentSchema = z.discriminatedUnion("type", [
+  SetTroopRatioIntentSchema,
+  SetAutopilotIntentSchema,
   AttackIntentSchema,
   CancelAttackIntentSchema,
   SpawnIntentSchema,

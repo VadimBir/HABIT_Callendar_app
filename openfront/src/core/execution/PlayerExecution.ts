@@ -5,6 +5,7 @@ import {
   Game,
   Player,
   Structures,
+  TroopClass,
   UnitType,
 } from "../game/Game";
 import { GameMap, TileRef } from "../game/GameMap";
@@ -76,7 +77,23 @@ export class PlayerExecution implements Execution {
     }
 
     const troopInc = this.config.troopIncreaseRate(this.player);
-    this.player.addTroops(troopInc);
+    // Stream B: split the per-tick troop increase across the 3 types by the
+    // player's growth ratio. When the army is at/near max, growth allocated to
+    // a type other than the current dominant means converting existing troops,
+    // which runs at 0.3x rate for that converted portion.
+    const ratio = this.player.troopRatio();
+    const dominant = this.player.effectiveTroopClass();
+    const max = this.config.maxTroops(this.player);
+    const nearMax = this.player.troops() >= 0.95 * max;
+    for (let t = 0; t < 3; t++) {
+      let portion = troopInc * ratio[t];
+      if (nearMax && t !== dominant) {
+        portion *= 0.3;
+      }
+      if (portion !== 0) {
+        this.player.addTroops(portion, t as TroopClass);
+      }
+    }
     const goldFromWorkers = this.config.goldAdditionRate(this.player);
     this.player.addGold(goldFromWorkers);
 

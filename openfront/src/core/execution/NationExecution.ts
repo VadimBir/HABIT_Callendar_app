@@ -9,6 +9,7 @@ import {
   PlayerType,
   Relation,
   TerrainType,
+  TroopClass,
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
@@ -46,6 +47,7 @@ export class NationExecution implements Execution {
   private expandRatio: number;
 
   private readonly embargoMalusApplied = new Set<PlayerID>();
+  private troopTypeCommitted = false;
 
   constructor(
     private gameID: GameID,
@@ -69,6 +71,60 @@ export class NationExecution implements Execution {
     } else {
       this.player = this.mg.player(this.nation.playerInfo.id);
     }
+
+    // Stream B: commit the bot to a dominant troop type at init.
+    this.setNationTroopType();
+  }
+
+  /**
+   * Stream B: commit this nation to a dominant troop type by setting its
+   * growth ratio (e.g. [0.8, 0.1, 0.1]). On Hard/Impossible, pick the class
+   * that counters the strongest neighboring player; otherwise pick randomly.
+   */
+  setNationTroopType(): void {
+    if (this.player === null) return;
+
+    let dominant: TroopClass | null = null;
+
+    const difficulty = this.mg.config().gameConfig().difficulty;
+    if (
+      difficulty === Difficulty.Hard ||
+      difficulty === Difficulty.Impossible
+    ) {
+      const strongest = this.strongestNeighbor();
+      if (strongest !== null) {
+        // Counter map: class that beats X is (X + 2) % 3 (since (a+1)%3===b
+        // means a counters b, so the counter of b is (b - 1 + 3) % 3).
+        const enemyClass = strongest.effectiveTroopClass();
+        dominant = ((enemyClass + 2) % 3) as TroopClass;
+        this.troopTypeCommitted = true;
+      }
+    }
+
+    if (dominant === null) {
+      dominant = this.random.nextInt(0, 3) as TroopClass;
+    }
+
+    const r: [number, number, number] = [0.1, 0.1, 0.1];
+    r[dominant] = 0.8;
+    this.player.setTroopRatio(r[0], r[1]);
+  }
+
+  private strongestNeighbor(): Player | null {
+    if (this.player === null) return null;
+    let strongest: Player | null = null;
+    let bestTroops = -1;
+    for (const other of this.mg.players()) {
+      if (other.id() === this.player.id()) continue;
+      if (!other.isAlive()) continue;
+      if (!this.player.sharesBorderWith(other)) continue;
+      const t = other.troops();
+      if (t > bestTroops) {
+        bestTroops = t;
+        strongest = other;
+      }
+    }
+    return strongest;
   }
 
   private getAttackRate(): number {
@@ -258,6 +314,12 @@ export class NationExecution implements Execution {
       this.player,
     );
     this.behaviorsInitialized = true;
+
+    // Stream B: now that the nation is on the map and has neighbors, re-pick
+    // its troop type to counter the strongest neighbor (Hard/Impossible).
+    if (!this.troopTypeCommitted) {
+      this.setNationTroopType();
+    }
   }
 
   private randomSpawnLand(): TileRef | null {

@@ -47,6 +47,7 @@
   },
   "build_menu": {
     "desc": {
+      "artillery_post": "Fires shells at nearby enemy units and structures",
       "atom_bomb": "Small explosion",
       "city": "Increases max population",
       "defense_post": "Increases defenses of nearby borders",
@@ -1288,6 +1289,7 @@
     "yes": "Yes"
   },
   "unit_type": {
+    "artillery_post": "Artillery Post",
     "atom_bomb": "Atom Bomb",
     "boat": "Boat",
     "city": "City",

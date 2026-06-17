@@ -18,6 +18,7 @@ import {
   PlayerType,
   Team,
   Tick,
+  TroopClass,
   UnitType,
 } from "../../core/game/Game";
 import { TileRef } from "../../core/game/GameMap";
@@ -79,6 +80,9 @@ function stateFromUpdate(pu: PlayerUpdate): PlayerState {
     tilesOwned: pu.tilesOwned!,
     gold: Number(pu.gold!),
     troops: pu.troops!,
+    troopsT1: pu.troopsT1 ?? pu.troops ?? 0,
+    troopsT2: pu.troopsT2 ?? 0,
+    troopsT3: pu.troopsT3 ?? 0,
     isTraitor: pu.isTraitor!,
     traitorRemainingTicks: Math.max(0, pu.traitorRemainingTicks ?? 0),
     betrayals: pu.betrayals!,
@@ -474,6 +478,31 @@ export class PlayerView {
 
   troops(): number {
     return this.state.troops;
+  }
+
+  // Stream B: per-type troop counts on the client view.
+  troopsByType(type: TroopClass): number {
+    switch (type) {
+      case TroopClass.T1:
+        return this.state.troopsT1;
+      case TroopClass.T2:
+        return this.state.troopsT2;
+      case TroopClass.T3:
+        return this.state.troopsT3;
+    }
+  }
+
+  effectiveTroopClass(): TroopClass {
+    let best = TroopClass.T1;
+    let bestVal = this.state.troopsT1;
+    if (this.state.troopsT2 > bestVal) {
+      best = TroopClass.T2;
+      bestVal = this.state.troopsT2;
+    }
+    if (this.state.troopsT3 > bestVal) {
+      best = TroopClass.T3;
+    }
+    return best;
   }
 
   totalUnitLevels(type: UnitType): number {
