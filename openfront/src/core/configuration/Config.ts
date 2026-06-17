@@ -882,18 +882,25 @@ export class Config {
     } else {
       baseRate = 100n;
     }
-    // Stream B: structure income synergy. unitCount returns the SUM of levels.
+    // Structure income synergy. unitCount returns the SUM of levels.
     // unitCount only exists on the sim-side Player (not PlayerView); income is
     // only ever computed sim-side, so guard for type-safety.
     const factoryLevelSum =
       "unitCount" in player ? player.unitCount(UnitType.Factory) : 0;
     const portLevelSum =
       "unitCount" in player ? player.unitCount(UnitType.Port) : 0;
-    const structureMultiplier =
-      Math.pow(1.1, factoryLevelSum) * Math.pow(1.5, portLevelSum);
-    return BigInt(
-      Math.floor(Number(baseRate) * multiplier * structureMultiplier),
-    );
+    // LINEAR, bounded synergy. The previous exponential (1.1^levels * 1.5^levels)
+    // compounded across every structure level and blew up to Infinity, which
+    // crashed BigInt(). Factory: +10% income per level. Port: +50% per level.
+    let structureMultiplier = 1 + 0.1 * factoryLevelSum + 0.5 * portLevelSum;
+    if (!Number.isFinite(structureMultiplier) || structureMultiplier > 1e6) {
+      structureMultiplier = 1e6;
+    }
+    let gold = Math.floor(Number(baseRate) * multiplier * structureMultiplier);
+    if (!Number.isFinite(gold)) {
+      gold = Number.MAX_SAFE_INTEGER;
+    }
+    return BigInt(gold);
   }
 
   nukeMagnitudes(unitType: UnitType): NukeMagnitude {
