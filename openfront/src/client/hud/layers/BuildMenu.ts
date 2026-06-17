@@ -23,6 +23,7 @@ import { TransformHandler } from "../../TransformHandler";
 import {
   BuildUnitIntentEvent,
   SendUpgradeStructureIntentEvent,
+  SetBuildMultiplierEvent,
 } from "../../Transport";
 import { UIState } from "../../UIState";
 import { renderNumber } from "../../Utils";
@@ -157,6 +158,10 @@ export class BuildMenu extends LitElement implements Controller {
     this.eventBus.on(CloseViewEvent, () => this.hideMenu());
     this.eventBus.on(ShowEmojiMenuEvent, () => this.hideMenu());
     this.eventBus.on(MouseDownEvent, () => this.hideMenu());
+    // The build/nuke multiplier now lives in the bottom control panel; read it.
+    this.eventBus.on(SetBuildMultiplierEvent, (e) => {
+      this._buildMultiplier = e.value;
+    });
   }
 
   tick() {
@@ -249,54 +254,6 @@ export class BuildMenu extends LitElement implements Controller {
     }
     .hidden {
       display: none !important;
-    }
-    .build-multi-row {
-      position: sticky;
-      top: -15px;
-      z-index: 50;
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      width: calc(100% + 30px);
-      margin: -15px -15px 10px -15px;
-      padding: 10px;
-      background-color: #111;
-      border-bottom: 2px solid #4a7dff;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
-    }
-    .build-multi-label {
-      color: #aaa;
-      font-size: 13px;
-      margin-right: 2px;
-    }
-    .build-multi-button {
-      min-width: 40px;
-      height: 38px;
-      border: 1px solid #444;
-      background-color: #2c2c2c;
-      color: white;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 13px;
-      font-weight: bold;
-      transition: all 0.2s ease;
-    }
-    .build-multi-button:hover {
-      background-color: #3a3a3a;
-      border-color: #666;
-    }
-    .build-multi-button.selected {
-      background-color: #4a7dff;
-      border-color: #6f9bff;
-    }
-    @media (max-width: 480px) {
-      .build-multi-button {
-        min-width: 30px;
-        height: 30px;
-        font-size: 12px;
-      }
     }
     .build-count-chip {
       position: absolute;
@@ -405,18 +362,11 @@ export class BuildMenu extends LitElement implements Controller {
   @state()
   private _hidden = true;
 
-  // Build-count multiplier: place this many structures per confirmed build.
-  private static readonly BUILD_MULTIPLIERS: readonly number[] = [
-    1, 2, 5, 10, 20, 50,
-  ];
-
+  // Build-count multiplier: place this many structures/nukes per confirmed build.
+  // Single source of truth lives in the bottom control panel; pushed here via
+  // SetBuildMultiplierEvent. Default 1.
   @state()
   private _buildMultiplier = 1;
-
-  private setBuildMultiplier(n: number): void {
-    this._buildMultiplier = n;
-    this.requestUpdate();
-  }
 
   // ---- Hold-to-stack: holding a build/upgrade button accumulates a count,
   // accelerating from a 1.0s step down to 0.25s (-0.1s per +1). Release builds
@@ -701,22 +651,6 @@ export class BuildMenu extends LitElement implements Controller {
         class="build-menu ${this._hidden ? "hidden" : ""}"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
-        <div class="build-multi-row">
-          <span class="build-multi-label">×N to build / send:</span>
-          ${BuildMenu.BUILD_MULTIPLIERS.map(
-            (n) => html`
-              <button
-                class="build-multi-button ${this._buildMultiplier === n
-                  ? "selected"
-                  : ""}"
-                @click=${() => this.setBuildMultiplier(n)}
-                title="Place ${n} at once"
-              >
-                ${n}
-              </button>
-            `,
-          )}
-        </div>
         ${this.filteredBuildTable.map(
           (row) => html`
             <div class="build-row">

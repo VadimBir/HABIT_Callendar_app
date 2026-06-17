@@ -12,9 +12,11 @@ import { UserSettings } from "../../../core/game/UserSettings";
 import { Controller } from "../../Controller";
 import { AttackRatioEvent } from "../../InputHandler";
 import {
+  AutoStructureCategory,
   SetTroopRatioEvent,
   SetAutopilotEvent,
-  SetAutoBuildEvent,
+  SetAutoStructureEvent,
+  SetBuildMultiplierEvent,
 } from "../../Transport";
 import { UIState } from "../../UIState";
 import {
@@ -615,20 +617,56 @@ export class ControlPanel extends LitElement implements Controller {
   @state()
   private _autopilotEnabled: boolean = false;
   @state()
-  private _autoBuildEnabled: boolean = false;
+  private _autoCity: boolean = false;
+  @state()
+  private _autoFactory: boolean = false;
+  @state()
+  private _autoSam: boolean = false;
+  @state()
+  private _autoPort: boolean = false;
+  @state()
+  private _selectedMultiplier: number = 1;
   @state()
   private _troopRatio0: number = 34;
   @state()
   private _troopRatio1: number = 33;
+
+  // Global build/nuke multiplier options.
+  private static readonly BUILD_MULTIPLIERS: readonly number[] = [
+    1, 2, 3, 5, 10, 20, 50,
+  ];
 
   private toggleAutopilot() {
     this._autopilotEnabled = !this._autopilotEnabled;
     this.eventBus.emit(new SetAutopilotEvent(this._autopilotEnabled));
   }
 
-  private toggleAutoBuild() {
-    this._autoBuildEnabled = !this._autoBuildEnabled;
-    this.eventBus.emit(new SetAutoBuildEvent(this._autoBuildEnabled));
+  private toggleAutoStructure(category: AutoStructureCategory) {
+    let enabled: boolean;
+    switch (category) {
+      case "city":
+        this._autoCity = !this._autoCity;
+        enabled = this._autoCity;
+        break;
+      case "factory":
+        this._autoFactory = !this._autoFactory;
+        enabled = this._autoFactory;
+        break;
+      case "sam":
+        this._autoSam = !this._autoSam;
+        enabled = this._autoSam;
+        break;
+      case "port":
+        this._autoPort = !this._autoPort;
+        enabled = this._autoPort;
+        break;
+    }
+    this.eventBus.emit(new SetAutoStructureEvent(category, enabled));
+  }
+
+  private selectMultiplier(n: number) {
+    this._selectedMultiplier = n;
+    this.eventBus.emit(new SetBuildMultiplierEvent(n));
   }
 
   private emitTroopRatio() {
@@ -651,29 +689,80 @@ export class ControlPanel extends LitElement implements Controller {
     this.emitTroopRatio();
   }
 
+  private renderAutoToggle(
+    label: string,
+    on: boolean,
+    onClick: () => void,
+    title: string,
+  ) {
+    return html`
+      <button
+        @click=${onClick}
+        title=${title}
+        class="flex-1 min-w-0 rounded px-1 py-1 text-[10px] font-bold leading-tight ${on
+          ? "bg-green-600 text-white"
+          : "bg-gray-600 text-gray-200"}"
+      >
+        ${label}
+      </button>
+    `;
+  }
+
   private renderModPanel() {
     const r2 = Math.max(0, 100 - this._troopRatio0 - this._troopRatio1);
     return html`
       <div class="mt-1 pt-1 border-t border-white/20 flex flex-col gap-1" translate="no">
-        <button
-          @click=${() => this.toggleAutopilot()}
-          class="w-full rounded px-2 py-1 text-xs font-bold ${this
-            ._autopilotEnabled
-            ? "bg-green-600 text-white"
-            : "bg-gray-600 text-gray-200"}"
-        >
-          ${this._autopilotEnabled ? "Autopilot: ON" : "Autopilot: OFF"}
-        </button>
-        <button
-          @click=${() => this.toggleAutoBuild()}
-          class="w-full rounded px-2 py-1 text-xs font-bold ${this
-            ._autoBuildEnabled
-            ? "bg-green-600 text-white"
-            : "bg-gray-600 text-gray-200"}"
-          title="Auto-spend gold on cities, factories & SAM (no attacking)"
-        >
-          ${this._autoBuildEnabled ? "Auto-Build: ON" : "Auto-Build: OFF"}
-        </button>
+        <!-- ROW 1: five independent auto toggles (multiple can be ON) -->
+        <div class="flex gap-1 flex-wrap">
+          ${this.renderAutoToggle(
+            "Autopilot",
+            this._autopilotEnabled,
+            () => this.toggleAutopilot(),
+            "Full AI plays for you (attacks, expands, nukes, builds)",
+          )}
+          ${this.renderAutoToggle(
+            "Auto Pop",
+            this._autoCity,
+            () => this.toggleAutoStructure("city"),
+            "Auto-build/upgrade CITIES only (spends gold, no attacking)",
+          )}
+          ${this.renderAutoToggle(
+            "Auto Fact",
+            this._autoFactory,
+            () => this.toggleAutoStructure("factory"),
+            "Auto-build/upgrade FACTORIES only (spends gold, no attacking)",
+          )}
+          ${this.renderAutoToggle(
+            "Auto Denuke",
+            this._autoSam,
+            () => this.toggleAutoStructure("sam"),
+            "Auto-build/upgrade SAM LAUNCHERS only (spends gold, no attacking)",
+          )}
+          ${this.renderAutoToggle(
+            "Auto Port",
+            this._autoPort,
+            () => this.toggleAutoStructure("port"),
+            "Auto-build/upgrade PORTS only (spends gold, no attacking)",
+          )}
+        </div>
+        <!-- ROW 2: global build/nuke multiplier (single source of truth) -->
+        <div class="flex gap-1 flex-wrap items-center">
+          <span class="text-[10px] text-gray-400 shrink-0">×N:</span>
+          ${ControlPanel.BUILD_MULTIPLIERS.map(
+            (n) => html`
+              <button
+                @click=${() => this.selectMultiplier(n)}
+                title="Build/send ${n} at once"
+                class="flex-1 min-w-0 rounded px-1 py-1 text-[11px] font-bold ${this
+                  ._selectedMultiplier === n
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-600 text-gray-200"}"
+              >
+                ×${n}
+              </button>
+            `,
+          )}
+        </div>
         <div class="flex items-center gap-1 text-[10px]">
           <span class="w-8 text-red-400">T1 ${this._troopRatio0}</span>
           <input type="range" min="0" max="100" .value=${String(this._troopRatio0)}

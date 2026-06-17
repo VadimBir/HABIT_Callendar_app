@@ -1,7 +1,7 @@
-import { Execution, Game } from "../game/Game";
+import { Execution, Game, UnitType } from "../game/Game";
 import { SetTroopRatioExecution } from "./SetTroopRatioExecution";
 import { AutopilotExecution } from "./AutopilotExecution";
-import { AutoBuildExecution } from "./AutoBuildExecution";
+import { AutoStructureExecution } from "./AutoStructureExecution";
 import { PseudoRandom } from "../PseudoRandom";
 import { ClientID, GameID, StampedIntent, Turn } from "../Schemas";
 import { simpleHash } from "../Util";
@@ -128,8 +128,22 @@ export class Executor {
         return new SetTroopRatioExecution(player, intent.ratio0, intent.ratio1);
       case "set_autopilot":
         return new AutopilotExecution(player, intent.enabled);
-      case "set_auto_build":
-        return new AutoBuildExecution(player, intent.enabled);
+      case "set_auto_structure": {
+        const categoryToUnitType: Record<
+          "city" | "factory" | "sam" | "port",
+          UnitType
+        > = {
+          city: UnitType.City,
+          factory: UnitType.Factory,
+          sam: UnitType.SAMLauncher,
+          port: UnitType.Port,
+        };
+        return new AutoStructureExecution(
+          player,
+          categoryToUnitType[intent.category],
+          intent.enabled,
+        );
+      }
       default:
         throw new Error(`intent type ${intent} not found`);
     }

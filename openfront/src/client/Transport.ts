@@ -191,9 +191,18 @@ export class SetAutopilotEvent implements GameEvent {
   constructor(public readonly enabled: boolean) {}
 }
 
-// Toggle auto-build (auto-spend gold on structures only; no combat).
-export class SetAutoBuildEvent implements GameEvent {
-  constructor(public readonly enabled: boolean) {}
+// Toggle per-category auto-build (auto-spend gold on ONE structure type; no combat).
+export type AutoStructureCategory = "city" | "factory" | "sam" | "port";
+export class SetAutoStructureEvent implements GameEvent {
+  constructor(
+    public readonly category: AutoStructureCategory,
+    public readonly enabled: boolean,
+  ) {}
+}
+
+// Client-only UI event: set the global build/nuke multiplier (×N). No intent/server.
+export class SetBuildMultiplierEvent implements GameEvent {
+  constructor(public readonly value: number) {}
 }
 
 export class Transport {
@@ -292,7 +301,7 @@ export class Transport {
 
     this.eventBus.on(SetTroopRatioEvent, (e) => this.onSetTroopRatio(e));
     this.eventBus.on(SetAutopilotEvent, (e) => this.onSetAutopilot(e));
-    this.eventBus.on(SetAutoBuildEvent, (e) => this.onSetAutoBuild(e));
+    this.eventBus.on(SetAutoStructureEvent, (e) => this.onSetAutoStructure(e));
   }
 
   private onSetTroopRatio(event: SetTroopRatioEvent) {
@@ -310,9 +319,10 @@ export class Transport {
     });
   }
 
-  private onSetAutoBuild(event: SetAutoBuildEvent) {
+  private onSetAutoStructure(event: SetAutoStructureEvent) {
     this.sendIntent({
-      type: "set_auto_build",
+      type: "set_auto_structure",
+      category: event.category,
       enabled: event.enabled,
     });
   }

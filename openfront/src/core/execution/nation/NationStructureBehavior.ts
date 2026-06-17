@@ -141,6 +141,25 @@ export class NationStructureBehavior {
     private player: Player,
   ) {}
 
+  /**
+   * Public per-type entry point used by the human-player Auto-{Pop,Fact,Denuke,Port}
+   * toggles. Spends the player's gold to UPGRADE an existing structure of exactly
+   * this type when density warrants it and one is upgradable, otherwise BUILDS a
+   * new one on a valid owned tile — reusing the same placement / value-function
+   * logic the nation AI uses (maybeSpawnStructure). Does NOT attack, expand, or nuke.
+   * Returns true if a build or upgrade was initiated.
+   */
+  buildOrUpgradeType(type: UnitType): boolean {
+    if (this.game.config().isUnitDisabled(type)) return false;
+    // Ports require coastal access; precompute the shared-water components so the
+    // coastal tile sampler used by maybeSpawnStructure works.
+    if (type === UnitType.Port) {
+      this._sharedWaterComponents = this.game.sharedWaterComponents(this.player);
+      if (this._sharedWaterComponents === null) return false;
+    }
+    return this.maybeSpawnStructure(type);
+  }
+
   handleStructures(): boolean {
     // Defense posts are handled outside the normal pacing/counter system:
     // they don't increment placementsCount or lastStructureTick, and they

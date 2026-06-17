@@ -54,11 +54,13 @@ export type Intent =
   | ToggleGameStartTimer
   | SetTroopRatioIntent
   | SetAutopilotIntent
-  | SetAutoBuildIntent;
+  | SetAutoStructureIntent;
 
 export type SetTroopRatioIntent = z.infer<typeof SetTroopRatioIntentSchema>;
 export type SetAutopilotIntent = z.infer<typeof SetAutopilotIntentSchema>;
-export type SetAutoBuildIntent = z.infer<typeof SetAutoBuildIntentSchema>;
+export type SetAutoStructureIntent = z.infer<
+  typeof SetAutoStructureIntentSchema
+>;
 export type AttackIntent = z.infer<typeof AttackIntentSchema>;
 export type CancelAttackIntent = z.infer<typeof CancelAttackIntentSchema>;
 export type SpawnIntent = z.infer<typeof SpawnIntentSchema>;
@@ -505,15 +507,16 @@ export const SetAutopilotIntentSchema = z.object({
   enabled: z.boolean(),
 });
 
-export const SetAutoBuildIntentSchema = z.object({
-  type: z.literal("set_auto_build"),
+export const SetAutoStructureIntentSchema = z.object({
+  type: z.literal("set_auto_structure"),
+  category: z.enum(["city", "factory", "sam", "port"]),
   enabled: z.boolean(),
 });
 
 const IntentSchema = z.discriminatedUnion("type", [
   SetTroopRatioIntentSchema,
   SetAutopilotIntentSchema,
-  SetAutoBuildIntentSchema,
+  SetAutoStructureIntentSchema,
   AttackIntentSchema,
   CancelAttackIntentSchema,
   SpawnIntentSchema,
