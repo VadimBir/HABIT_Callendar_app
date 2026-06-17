@@ -251,12 +251,20 @@ export class BuildMenu extends LitElement implements Controller {
       display: none !important;
     }
     .build-multi-row {
+      position: sticky;
+      top: -15px;
+      z-index: 50;
       display: flex;
       flex-wrap: wrap;
       align-items: center;
       justify-content: center;
-      gap: 4px;
-      margin-bottom: 8px;
+      gap: 6px;
+      width: calc(100% + 30px);
+      margin: -15px -15px 10px -15px;
+      padding: 10px;
+      background-color: #111;
+      border-bottom: 2px solid #4a7dff;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
     }
     .build-multi-label {
       color: #aaa;

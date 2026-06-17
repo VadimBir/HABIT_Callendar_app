@@ -1,6 +1,7 @@
 import { Execution, Game } from "../game/Game";
 import { SetTroopRatioExecution } from "./SetTroopRatioExecution";
 import { AutopilotExecution } from "./AutopilotExecution";
+import { AutoBuildExecution } from "./AutoBuildExecution";
 import { PseudoRandom } from "../PseudoRandom";
 import { ClientID, GameID, StampedIntent, Turn } from "../Schemas";
 import { simpleHash } from "../Util";
@@ -127,6 +128,8 @@ export class Executor {
         return new SetTroopRatioExecution(player, intent.ratio0, intent.ratio1);
       case "set_autopilot":
         return new AutopilotExecution(player, intent.enabled);
+      case "set_auto_build":
+        return new AutoBuildExecution(player, intent.enabled);
       default:
         throw new Error(`intent type ${intent} not found`);
     }

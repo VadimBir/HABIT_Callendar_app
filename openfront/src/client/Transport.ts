@@ -191,6 +191,11 @@ export class SetAutopilotEvent implements GameEvent {
   constructor(public readonly enabled: boolean) {}
 }
 
+// Toggle auto-build (auto-spend gold on structures only; no combat).
+export class SetAutoBuildEvent implements GameEvent {
+  constructor(public readonly enabled: boolean) {}
+}
+
 export class Transport {
   private socket: WebSocket | null = null;
 
@@ -287,6 +292,7 @@ export class Transport {
 
     this.eventBus.on(SetTroopRatioEvent, (e) => this.onSetTroopRatio(e));
     this.eventBus.on(SetAutopilotEvent, (e) => this.onSetAutopilot(e));
+    this.eventBus.on(SetAutoBuildEvent, (e) => this.onSetAutoBuild(e));
   }
 
   private onSetTroopRatio(event: SetTroopRatioEvent) {
@@ -300,6 +306,13 @@ export class Transport {
   private onSetAutopilot(event: SetAutopilotEvent) {
     this.sendIntent({
       type: "set_autopilot",
+      enabled: event.enabled,
+    });
+  }
+
+  private onSetAutoBuild(event: SetAutoBuildEvent) {
+    this.sendIntent({
+      type: "set_auto_build",
       enabled: event.enabled,
     });
   }

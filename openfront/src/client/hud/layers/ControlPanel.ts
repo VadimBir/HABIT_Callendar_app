@@ -11,7 +11,11 @@ import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { Controller } from "../../Controller";
 import { AttackRatioEvent } from "../../InputHandler";
-import { SetTroopRatioEvent, SetAutopilotEvent } from "../../Transport";
+import {
+  SetTroopRatioEvent,
+  SetAutopilotEvent,
+  SetAutoBuildEvent,
+} from "../../Transport";
 import { UIState } from "../../UIState";
 import {
   getGamesPlayed,
@@ -611,6 +615,8 @@ export class ControlPanel extends LitElement implements Controller {
   @state()
   private _autopilotEnabled: boolean = false;
   @state()
+  private _autoBuildEnabled: boolean = false;
+  @state()
   private _troopRatio0: number = 34;
   @state()
   private _troopRatio1: number = 33;
@@ -618,6 +624,11 @@ export class ControlPanel extends LitElement implements Controller {
   private toggleAutopilot() {
     this._autopilotEnabled = !this._autopilotEnabled;
     this.eventBus.emit(new SetAutopilotEvent(this._autopilotEnabled));
+  }
+
+  private toggleAutoBuild() {
+    this._autoBuildEnabled = !this._autoBuildEnabled;
+    this.eventBus.emit(new SetAutoBuildEvent(this._autoBuildEnabled));
   }
 
   private emitTroopRatio() {
@@ -652,6 +663,16 @@ export class ControlPanel extends LitElement implements Controller {
             : "bg-gray-600 text-gray-200"}"
         >
           ${this._autopilotEnabled ? "Autopilot: ON" : "Autopilot: OFF"}
+        </button>
+        <button
+          @click=${() => this.toggleAutoBuild()}
+          class="w-full rounded px-2 py-1 text-xs font-bold ${this
+            ._autoBuildEnabled
+            ? "bg-green-600 text-white"
+            : "bg-gray-600 text-gray-200"}"
+          title="Auto-spend gold on cities, factories & SAM (no attacking)"
+        >
+          ${this._autoBuildEnabled ? "Auto-Build: ON" : "Auto-Build: OFF"}
         </button>
         <div class="flex items-center gap-1 text-[10px]">
           <span class="w-8 text-red-400">T1 ${this._troopRatio0}</span>
