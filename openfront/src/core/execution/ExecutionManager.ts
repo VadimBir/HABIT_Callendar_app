@@ -32,6 +32,7 @@ import { TargetPlayerExecution } from "./TargetPlayerExecution";
 import { TransportShipExecution } from "./TransportShipExecution";
 import { TribeSpawner } from "./TribeSpawner";
 import { UpgradeStructureExecution } from "./UpgradeStructureExecution";
+import { WarshipExecution } from "./WarshipExecution";
 import { PlayerSpawner } from "./utils/PlayerSpawner";
 
 export class Executor {
@@ -190,6 +191,29 @@ export class Executor {
         }
         return execs;
       }
+      case "multi_unit": {
+        const MAX_UNITS = 50;
+        const count = Math.max(1, Math.min(MAX_UNITS, intent.count));
+        const execs: Execution[] = [];
+        if (intent.unit === UnitType.Warship) {
+          // First warship: normal path (uses a port as usual). Remaining ones
+          // force-spawn from an owned port, bypassing the gold gate so all N
+          // appear from a single port. Each is an independent unit.
+          const tiles = [
+            intent.tile,
+            ...this.spreadWaterTargets(intent.tile, count - 1),
+          ];
+          for (let i = 0; i < tiles.length; i++) {
+            execs.push(
+              new WarshipExecution(
+                { owner: player, patrolTile: tiles[i] },
+                true, // force-spawn so all N appear from the single port
+              ),
+            );
+          }
+        }
+        return execs;
+      }
       default:
         throw new Error(`intent type ${intent} not found`);
     }
@@ -237,6 +261,44 @@ export class Executor {
           result.push(this.mg.ref(x, y));
         }
       }
+    }
+    return result;
+  }
+
+  /**
+   * Compute up to `count` spread patrol tiles around `center`, preferring water
+   * tiles (so warships spawn at distinct sail-able patrol points). Falls back to
+   * the center if no water tile is found in a ring. Deterministic.
+   */
+  private spreadWaterTargets(center: number, count: number): number[] {
+    const result: number[] = [];
+    if (count <= 0) return result;
+
+    const rand = new PseudoRandom(simpleHash(this.gameID) + center + 13);
+    const ox = this.mg.x(center);
+    const oy = this.mg.y(center);
+    const spacing = 6;
+    const maxRadius = Math.min(120, spacing * (2 + Math.ceil(count / 4)));
+
+    for (let r = spacing; r <= maxRadius && result.length < count; r += 2) {
+      for (let dx = -r; dx <= r && result.length < count; dx += spacing) {
+        for (let dy = -r; dy <= r && result.length < count; dy += spacing) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+          const jx = rand.nextInt(-1, 2);
+          const jy = rand.nextInt(-1, 2);
+          const x = ox + dx + jx;
+          const y = oy + dy + jy;
+          if (!this.mg.isValidCoord(x, y)) continue;
+          const t = this.mg.ref(x, y);
+          if (!this.mg.isWater(t)) continue;
+          result.push(t);
+        }
+      }
+    }
+    // Pad with the center tile if not enough distinct water tiles were found so
+    // the requested count of warships is still honoured.
+    while (result.length < count) {
+      result.push(center);
     }
     return result;
   }

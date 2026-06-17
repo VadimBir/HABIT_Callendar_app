@@ -84,8 +84,10 @@ export class AutoExpandExecution implements Execution {
 
     this.tickCounter++;
     if (this.tickCounter % this.actEvery !== 0) return;
-    // Force-grab unclaimed land only (no player attacks).
-    this.attackBehavior.sendAttack(this.mg.terraNullius(), true);
+    // Run the bot's full expansion: grabs neutral/terra-nullius land AND
+    // presses weak bordering players to actually grow territory. (Plain
+    // sendAttack(terraNullius) did nothing once nearby unclaimed land was gone.)
+    this.attackBehavior.maybeAttack();
   }
 
   isActive(): boolean {

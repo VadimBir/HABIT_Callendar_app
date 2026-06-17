@@ -28,6 +28,10 @@ export class WarshipExecution implements Execution {
 
   constructor(
     private input: (UnitParams<UnitType.Warship> & OwnerComp) | Unit,
+    // When true, bypass the gold/standard canBuild gate by spawning from any
+    // owned port reachable by water from the patrol tile. Used by multi-unit
+    // builds so N warships spawn from a single port (mirrors nuke forceSpawn).
+    private forceSpawn: boolean = false,
   ) {}
 
   init(mg: Game, ticks: number): void {
@@ -37,23 +41,69 @@ export class WarshipExecution implements Execution {
     if (isUnit(this.input)) {
       this.warship = this.input;
     } else {
-      const spawn = this.input.owner.canBuild(
-        UnitType.Warship,
-        this.input.patrolTile,
-      );
+      let params = this.input;
+      let spawn = params.owner.canBuild(UnitType.Warship, params.patrolTile);
+      if (spawn === false && this.forceSpawn) {
+        spawn = this.fallbackSpawnTile(params);
+        // If the requested patrol tile isn't reachable from the chosen port,
+        // patrol from the spawn (port) tile so the warship has a valid station.
+        const patrolComponent = this.mg.getWaterComponent(params.patrolTile);
+        if (
+          spawn !== false &&
+          (patrolComponent === null ||
+            !this.mg.hasWaterComponent(spawn, patrolComponent))
+        ) {
+          params = { ...params, patrolTile: spawn };
+        }
+      }
       if (spawn === false) {
         console.warn(
-          `Failed to spawn warship for ${this.input.owner.name()} at ${this.input.patrolTile}`,
+          `Failed to spawn warship for ${params.owner.name()} at ${params.patrolTile}`,
         );
         return;
       }
-      this.warship = this.input.owner.buildUnit(
-        UnitType.Warship,
-        spawn,
-        this.input,
-      );
+      this.warship = params.owner.buildUnit(UnitType.Warship, spawn, params);
     }
     this.lastObservedPatrolTile = this.warship.warshipState().patrolTile;
+  }
+
+  /**
+   * Find a spawn tile for a force-spawned warship, ignoring the gold gate.
+   * Prefers an owned, active port whose water component reaches the patrol
+   * tile (so the warship can actually sail). Returns false if the player owns
+   * no usable port.
+   */
+  private fallbackSpawnTile(
+    input: UnitParams<UnitType.Warship> & OwnerComp,
+  ): TileRef | false {
+    const owner = input.owner;
+    const patrolTile = input.patrolTile;
+    const tileComponent = this.mg.getWaterComponent(patrolTile);
+    const pick = (requireReachable: boolean): TileRef | false => {
+      let best: Unit | undefined;
+      let bestDist = Infinity;
+      for (const port of owner.units(UnitType.Port)) {
+        if (port.isUnderConstruction()) continue;
+        if (
+          requireReachable &&
+          tileComponent !== null &&
+          !this.mg.hasWaterComponent(port.tile(), tileComponent)
+        ) {
+          continue;
+        }
+        const d = this.mg.manhattanDist(port.tile(), patrolTile);
+        if (d < bestDist) {
+          bestDist = d;
+          best = port;
+        }
+      }
+      return best?.tile() ?? false;
+    };
+    // Prefer a port whose water reaches the patrol tile; otherwise fall back to
+    // any active port (the warship will patrol from the port tile). This keeps
+    // all N warships spawning even when a spread patrol tile is unreachable.
+    const reachable = pick(true);
+    return reachable !== false ? reachable : pick(false);
   }
 
   tick(ticks: number): void {

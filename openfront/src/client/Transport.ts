@@ -216,6 +216,17 @@ export class SendMultiNukeEvent implements GameEvent {
   ) {}
 }
 
+// Spawn N independent units (currently Warship) of the same type from a single
+// build action, bypassing the per-build gold gate on the server so all N appear
+// (see ExecutionManager multi_unit). Each spawned unit is individually destroyable.
+export class SendMultiUnitEvent implements GameEvent {
+  constructor(
+    public readonly unit: UnitType,
+    public readonly tile: TileRef,
+    public readonly count: number,
+  ) {}
+}
+
 // Client-only UI event: set the global build/nuke multiplier (×N). No intent/server.
 export class SetBuildMultiplierEvent implements GameEvent {
   constructor(public readonly value: number) {}
@@ -316,6 +327,7 @@ export class Transport {
     );
 
     this.eventBus.on(SendMultiNukeEvent, (e) => this.onSendMultiNuke(e));
+    this.eventBus.on(SendMultiUnitEvent, (e) => this.onSendMultiUnit(e));
     this.eventBus.on(SetTroopRatioEvent, (e) => this.onSetTroopRatio(e));
     this.eventBus.on(SetAutopilotEvent, (e) => this.onSetAutopilot(e));
     this.eventBus.on(SetAutoStructureEvent, (e) => this.onSetAutoStructure(e));
@@ -331,6 +343,15 @@ export class Transport {
       tile: event.tile,
       count: event.count,
       rocketDirectionUp: event.rocketDirectionUp,
+    });
+  }
+
+  private onSendMultiUnit(event: SendMultiUnitEvent) {
+    this.sendIntent({
+      type: "multi_unit",
+      unit: event.unit as UnitType.Warship,
+      tile: event.tile,
+      count: event.count,
     });
   }
 

@@ -55,11 +55,13 @@ export type Intent =
   | SetTroopRatioIntent
   | SetAutopilotIntent
   | SetAutoStructureIntent
-  | MultiNukeIntent;
+  | MultiNukeIntent
+  | MultiUnitIntent;
 
 export type SetTroopRatioIntent = z.infer<typeof SetTroopRatioIntentSchema>;
 export type SetAutopilotIntent = z.infer<typeof SetAutopilotIntentSchema>;
 export type MultiNukeIntent = z.infer<typeof MultiNukeIntentSchema>;
+export type MultiUnitIntent = z.infer<typeof MultiUnitIntentSchema>;
 export type SetAutoStructureIntent = z.infer<
   typeof SetAutoStructureIntentSchema
 >;
@@ -527,8 +529,17 @@ export const MultiNukeIntentSchema = z.object({
   rocketDirectionUp: z.boolean().optional(),
 });
 
+export const MultiUnitIntentSchema = z.object({
+  type: z.literal("multi_unit"),
+  // Currently only Warship supports multi-spawn from the build menu.
+  unit: z.enum([UnitType.Warship]),
+  tile: z.number(),
+  count: z.number().int().positive(),
+});
+
 const IntentSchema = z.discriminatedUnion("type", [
   MultiNukeIntentSchema,
+  MultiUnitIntentSchema,
   SetTroopRatioIntentSchema,
   SetAutopilotIntentSchema,
   SetAutoStructureIntentSchema,

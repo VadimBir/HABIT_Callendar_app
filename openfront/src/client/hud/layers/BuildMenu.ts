@@ -23,6 +23,7 @@ import { TransformHandler } from "../../TransformHandler";
 import {
   BuildUnitIntentEvent,
   SendMultiNukeEvent,
+  SendMultiUnitEvent,
   SendUpgradeStructureIntentEvent,
   SetBuildMultiplierEvent,
 } from "../../Transport";
@@ -446,12 +447,18 @@ export class BuildMenu extends LitElement implements Controller {
         buildableUnit.type === UnitType.AtomBomb ||
         buildableUnit.type === UnitType.HydrogenBomb ||
         buildableUnit.type === UnitType.MIRV;
+      const isMultiUnit = buildableUnit.type === UnitType.Warship;
       if (n > 1 && isNuke) {
         // Multi-nuke: one intent fires N nukes spread around the target,
         // bypassing the silo-cooldown gate server-side.
         this.eventBus.emit(
           new SendMultiNukeEvent(buildableUnit.type, tile, n, rocketDirectionUp),
         );
+      } else if (n > 1 && isMultiUnit) {
+        // Multi-unit (warships): one intent spawns N independent warships from
+        // a single port, bypassing the gold gate server-side. Each warship is
+        // its own unit a SAM/enemy must deal with separately.
+        this.eventBus.emit(new SendMultiUnitEvent(buildableUnit.type, tile, n));
       } else {
         this.eventBus.emit(
           new BuildUnitIntentEvent(buildableUnit.type, tile, rocketDirectionUp),
@@ -494,37 +501,11 @@ export class BuildMenu extends LitElement implements Controller {
   }
 
   public sendBuildOrUpgrade(buildableUnit: BuildableUnit, tile: TileRef): void {
-    if (buildableUnit.canUpgrade !== false) {
-      this.eventBus.emit(
-        new SendUpgradeStructureIntentEvent(
-          buildableUnit.canUpgrade,
-          buildableUnit.type,
-        ),
-      );
-    } else if (buildableUnit.canBuild) {
-      const rocketDirectionUp =
-        buildableUnit.type === UnitType.AtomBomb ||
-        buildableUnit.type === UnitType.HydrogenBomb
-          ? this.uiState.rocketDirectionUp
-          : undefined;
-      // Always place the first one at the clicked tile.
-      this.eventBus.emit(
-        new BuildUnitIntentEvent(buildableUnit.type, tile, rocketDirectionUp),
-      );
-      // Build-multi: only for structures, and only if multiplier > 1.
-      if (
-        this._buildMultiplier > 1 &&
-        (Structures.types as readonly UnitType[]).includes(buildableUnit.type)
-      ) {
-        // Fire-and-forget; placements are validated per-tile.
-        void this.placeAdditional(
-          buildableUnit,
-          tile,
-          this._buildMultiplier - 1,
-        );
-      }
-    }
-    this.hideMenu();
+    // Route through the same multiplier-aware path used by hold-to-stack so the
+    // ×N selector applies regardless of whether the build was triggered from the
+    // radial menu or the build-menu grid. (Previously this method ignored the
+    // multiplier for nukes/warships, so only ONE ever fired in real games.)
+    this.performBuildOrUpgradeN(buildableUnit, tile, this._buildMultiplier);
   }
 
   /**
