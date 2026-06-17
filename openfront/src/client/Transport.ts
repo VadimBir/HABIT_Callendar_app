@@ -200,6 +200,17 @@ export class SetAutoStructureEvent implements GameEvent {
   ) {}
 }
 
+// Fire N nukes of the same type at/around a tile in a single intent,
+// bypassing the silo-cooldown gate on the server (see ExecutionManager).
+export class SendMultiNukeEvent implements GameEvent {
+  constructor(
+    public readonly nukeType: UnitType,
+    public readonly tile: TileRef,
+    public readonly count: number,
+    public readonly rocketDirectionUp?: boolean,
+  ) {}
+}
+
 // Client-only UI event: set the global build/nuke multiplier (×N). No intent/server.
 export class SetBuildMultiplierEvent implements GameEvent {
   constructor(public readonly value: number) {}
@@ -299,9 +310,23 @@ export class Transport {
       this.onSendToggleGameStartTimer(e),
     );
 
+    this.eventBus.on(SendMultiNukeEvent, (e) => this.onSendMultiNuke(e));
     this.eventBus.on(SetTroopRatioEvent, (e) => this.onSetTroopRatio(e));
     this.eventBus.on(SetAutopilotEvent, (e) => this.onSetAutopilot(e));
     this.eventBus.on(SetAutoStructureEvent, (e) => this.onSetAutoStructure(e));
+  }
+
+  private onSendMultiNuke(event: SendMultiNukeEvent) {
+    this.sendIntent({
+      type: "multi_nuke",
+      nukeType: event.nukeType as
+        | UnitType.AtomBomb
+        | UnitType.HydrogenBomb
+        | UnitType.MIRV,
+      tile: event.tile,
+      count: event.count,
+      rocketDirectionUp: event.rocketDirectionUp,
+    });
   }
 
   private onSetTroopRatio(event: SetTroopRatioEvent) {

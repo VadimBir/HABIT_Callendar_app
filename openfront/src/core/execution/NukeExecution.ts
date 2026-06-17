@@ -34,6 +34,7 @@ export class NukeExecution implements Execution {
     private speed: number = -1,
     private waitTicks = 0,
     private rocketDirectionUp: boolean = true,
+    private forceSpawn: boolean = false,
   ) {}
 
   init(mg: Game, ticks: number): void {
@@ -177,11 +178,28 @@ export class NukeExecution implements Execution {
 
   tick(ticks: number): void {
     if (this.nuke === null) {
-      const spawn = this.player.canBuild(this.nukeType, this.dst);
+      let spawn = this.player.canBuild(this.nukeType, this.dst);
+      let usedFallbackSpawn = false;
       if (spawn === false) {
-        console.warn(`cannot build Nuke`);
-        this.active = false;
-        return;
+        if (!this.forceSpawn) {
+          console.warn(`cannot build Nuke`);
+          this.active = false;
+          return;
+        }
+        // forceSpawn: bypass the silo-cooldown / one-per-silo gate by picking
+        // a fallback spawn tile, ignoring cooldown.
+        const fallback = this.fallbackSpawnTile();
+        if (fallback === null) {
+          console.warn(`cannot force-build Nuke: no fallback spawn tile`);
+          this.active = false;
+          return;
+        }
+        spawn = fallback;
+        usedFallbackSpawn = true;
+        // NOTE: buildUnit() below calls removeGold(cost) internally, and
+        // removeGold only deducts up to the gold actually held. So the forced
+        // nuke is charged exactly once (or free if the player can't afford it)
+        // without any extra manual deduction here.
       }
       this.src = spawn;
       this.nuke = this.player.buildUnit(this.nukeType, spawn, {
@@ -218,12 +236,17 @@ export class NukeExecution implements Execution {
         this.mg.stats().bombLaunch(this.player, target, this.nukeType);
       }
 
-      // after sending a nuke set the missilesilo on cooldown
-      const silo = this.player
-        .units(UnitType.MissileSilo)
-        .find((silo) => silo.tile() === spawn);
-      if (silo) {
-        silo.launch();
+      // after sending a nuke set the missilesilo on cooldown.
+      // When forceSpawn used the fallback tile we intentionally skip the
+      // cooldown so multiple forced nukes can spawn from the same silo on the
+      // same tick.
+      if (!usedFallbackSpawn) {
+        const silo = this.player
+          .units(UnitType.MissileSilo)
+          .find((silo) => silo.tile() === spawn);
+        if (silo) {
+          silo.launch();
+        }
       }
       return;
     }
@@ -254,6 +277,37 @@ export class NukeExecution implements Execution {
 
   public getNuke(): Unit | null {
     return this.nuke;
+  }
+
+  /**
+   * Pick a spawn tile for a force-spawned nuke, ignoring missile-silo cooldown.
+   * Preference order:
+   *   1. The player's first MissileSilo tile (cooldown ignored).
+   *   2. Any owned land tile (closest to the target if possible).
+   *   3. Any owned tile.
+   * Returns null only if the player owns nothing.
+   */
+  private fallbackSpawnTile(): TileRef | null {
+    const silos = this.player.units(UnitType.MissileSilo);
+    if (silos.length > 0) {
+      return silos[0].tile();
+    }
+    let anyOwned: TileRef | null = null;
+    let bestLand: TileRef | null = null;
+    let bestLandDist = Infinity;
+    for (const tile of this.player.tiles()) {
+      if (anyOwned === null) {
+        anyOwned = tile;
+      }
+      if (this.mg.isLand(tile)) {
+        const d = this.mg.euclideanDistSquared(this.dst, tile);
+        if (d < bestLandDist) {
+          bestLandDist = d;
+          bestLand = tile;
+        }
+      }
+    }
+    return bestLand ?? anyOwned;
   }
 
   /**

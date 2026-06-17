@@ -54,10 +54,12 @@ export type Intent =
   | ToggleGameStartTimer
   | SetTroopRatioIntent
   | SetAutopilotIntent
-  | SetAutoStructureIntent;
+  | SetAutoStructureIntent
+  | MultiNukeIntent;
 
 export type SetTroopRatioIntent = z.infer<typeof SetTroopRatioIntentSchema>;
 export type SetAutopilotIntent = z.infer<typeof SetAutopilotIntentSchema>;
+export type MultiNukeIntent = z.infer<typeof MultiNukeIntentSchema>;
 export type SetAutoStructureIntent = z.infer<
   typeof SetAutoStructureIntentSchema
 >;
@@ -513,7 +515,20 @@ export const SetAutoStructureIntentSchema = z.object({
   enabled: z.boolean(),
 });
 
+export const MultiNukeIntentSchema = z.object({
+  type: z.literal("multi_nuke"),
+  nukeType: z.enum([
+    UnitType.AtomBomb,
+    UnitType.HydrogenBomb,
+    UnitType.MIRV,
+  ]),
+  tile: z.number(),
+  count: z.number().int().positive(),
+  rocketDirectionUp: z.boolean().optional(),
+});
+
 const IntentSchema = z.discriminatedUnion("type", [
+  MultiNukeIntentSchema,
   SetTroopRatioIntentSchema,
   SetAutopilotIntentSchema,
   SetAutoStructureIntentSchema,
