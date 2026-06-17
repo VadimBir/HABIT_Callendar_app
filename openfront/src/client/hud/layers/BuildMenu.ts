@@ -264,8 +264,8 @@ export class BuildMenu extends LitElement implements Controller {
       margin-right: 2px;
     }
     .build-multi-button {
-      min-width: 34px;
-      height: 34px;
+      min-width: 40px;
+      height: 38px;
       border: 1px solid #444;
       background-color: #2c2c2c;
       color: white;
@@ -399,7 +399,7 @@ export class BuildMenu extends LitElement implements Controller {
 
   // Build-count multiplier: place this many structures per confirmed build.
   private static readonly BUILD_MULTIPLIERS: readonly number[] = [
-    1, 2, 4, 8, 10, 20, 50,
+    1, 2, 5, 10, 20, 50,
   ];
 
   @state()
@@ -486,14 +486,77 @@ export class BuildMenu extends LitElement implements Controller {
       this.eventBus.emit(
         new BuildUnitIntentEvent(buildableUnit.type, tile, rocketDirectionUp),
       );
+      const isNuke =
+        buildableUnit.type === UnitType.AtomBomb ||
+        buildableUnit.type === UnitType.HydrogenBomb ||
+        buildableUnit.type === UnitType.MIRV;
       if (
         n > 1 &&
         (Structures.types as readonly UnitType[]).includes(buildableUnit.type)
       ) {
         void this.placeAdditional(buildableUnit, tile, n - 1);
+      } else if (n > 1 && isNuke) {
+        // Multi-nuke: rain n nukes spread across an area around the target.
+        void this.spreadNukes(buildableUnit, tile, n - 1, rocketDirectionUp);
       }
     }
     this.hideMenu();
+  }
+
+  /**
+   * Fire up to `remaining` extra nukes spread around the target tile, covering
+   * an area that grows with the count. Each target is validated and budget is
+   * tracked so we never overspend.
+   */
+  private async spreadNukes(
+    buildableUnit: BuildableUnit,
+    target: TileRef,
+    remaining: number,
+    rocketDirectionUp: boolean | undefined,
+  ): Promise<void> {
+    const player = this.game?.myPlayer();
+    if (!player || remaining <= 0) return;
+    const type = buildableUnit.type;
+    let budget = player.gold();
+    const perUnitCost = buildableUnit.cost;
+
+    const ox = this.game.x(target);
+    const oy = this.game.y(target);
+    const spacing = 8;
+    // area scales with how many we are sending
+    const maxRadius = Math.min(120, spacing * (2 + Math.ceil(remaining / 4)));
+    const chosen: { x: number; y: number }[] = [{ x: ox, y: oy }];
+    const candidates: TileRef[] = [];
+    for (let r = spacing; r <= maxRadius && candidates.length < 400; r += 2) {
+      for (let dx = -r; dx <= r; dx += spacing) {
+        for (let dy = -r; dy <= r; dy += spacing) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+          const x = ox + dx;
+          const y = oy + dy;
+          if (!this.game.isValidCoord(x, y)) continue;
+          if (
+            chosen.some(
+              (p) => Math.max(Math.abs(p.x - x), Math.abs(p.y - y)) < spacing,
+            )
+          ) {
+            continue;
+          }
+          candidates.push(this.game.ref(x, y));
+          chosen.push({ x, y });
+        }
+      }
+    }
+
+    for (const t of candidates) {
+      if (remaining <= 0) break;
+      if (perUnitCost > 0n && budget < perUnitCost) break;
+      const builds = await player.buildables(t, [type]);
+      const bu = builds.find((b) => b.type === type);
+      if (!bu || bu.canBuild === false) continue;
+      this.eventBus.emit(new BuildUnitIntentEvent(type, bu.canBuild, rocketDirectionUp));
+      budget -= perUnitCost;
+      remaining--;
+    }
   }
 
   public canBuildOrUpgrade(item: BuildItemDisplay): boolean {
@@ -631,7 +694,7 @@ export class BuildMenu extends LitElement implements Controller {
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         <div class="build-multi-row">
-          <span class="build-multi-label">x</span>
+          <span class="build-multi-label">×N to build / send:</span>
           ${BuildMenu.BUILD_MULTIPLIERS.map(
             (n) => html`
               <button
