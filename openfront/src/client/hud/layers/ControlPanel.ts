@@ -754,7 +754,7 @@ export class ControlPanel extends LitElement implements Controller {
             "Auto Expand",
             this._autoExpand,
             () => this.toggleAutoStructure("expand"),
-            "Auto-grab neutral/unclaimed land (no attacking other players)",
+            "Auto-build buildings starting at the safest spot (furthest from enemies) and spread outward",
           )}
         </div>
         <!-- ROW 2: global build/nuke multiplier (single source of truth) -->
