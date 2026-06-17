@@ -152,8 +152,8 @@ describe("GameView.update — packed channels", () => {
     );
 
     const gu = makeEmptyGu(2);
-    // [smallID, tilesOwned, gold, troops]
-    gu.packedPlayerUpdates = new Float64Array([1, 42, 999, 250]);
+    // [smallID, tilesOwned, gold, troopsT1, troopsT2, troopsT3, troopsTotal]
+    gu.packedPlayerUpdates = new Float64Array([1, 42, 999, 250, 0, 0, 250]);
     game.update(gu);
 
     const alice = game.player("alice");
@@ -214,7 +214,7 @@ describe("GameView.update — packed channels", () => {
       withPlayers(1, [makePlayerUpdate({ id: "alice", smallID: 1 })]),
     );
     const gu = makeEmptyGu(2);
-    gu.packedPlayerUpdates = new Float64Array([99, 1, 1, 1]);
+    gu.packedPlayerUpdates = new Float64Array([99, 1, 1, 1, 0, 0, 1]);
     gu.packedAttackUpdates = new Float64Array([1, 0, 5, 123, 99, 1, 0, 7]);
     expect(() => game.update(gu)).not.toThrow();
   });
@@ -291,7 +291,7 @@ describe("GameView.update — packed channels", () => {
     );
     const bigGold = 2 ** 52 + 11; // integer, exactly representable in f64
     const gu = makeEmptyGu(2);
-    gu.packedPlayerUpdates = new Float64Array([1, 0, bigGold, 0]);
+    gu.packedPlayerUpdates = new Float64Array([1, 0, bigGold, 0, 0, 0, 0]);
     game.update(gu);
     expect(game.player("alice").gold()).toBe(BigInt(bigGold));
   });

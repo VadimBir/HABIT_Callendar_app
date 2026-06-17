@@ -60,10 +60,7 @@ function getStructureRatios(
       ratioPerCity: 0.2,
       perceivedCostIncreasePerOwned: 1,
     },
-    [UnitType.ArtilleryPost]: {
-      ratioPerCity: 0.2,
-      perceivedCostIncreasePerOwned: 0.3,
-    },
+    // Artillery Post removed: no longer buildable by player or AI.
   };
 }
 
@@ -474,7 +471,6 @@ export class NationStructureBehavior {
       UnitType.Factory,
       UnitType.SAMLauncher,
       UnitType.MissileSilo,
-      UnitType.ArtilleryPost,
     ];
 
     const nukesEnabled =

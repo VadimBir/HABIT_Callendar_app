@@ -6,6 +6,7 @@ import {
   PlayerProfile,
   PlayerType,
   Relation,
+  TroopClass,
   Unit,
   UnitType,
 } from "../../../core/game/Game";
@@ -352,6 +353,11 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
                   src=${assetUrl(player.cosmetics.flag!)}
                 />`
               : html``}
+            <span
+              class="inline-block w-3 h-3 rounded-sm border border-white/40 shrink-0"
+              style="background-color: ${player.troopCompositionColor()}"
+              title="Army composition"
+            ></span>
             <span>${player.displayName()}</span>
             ${this.getRelationSmiley(player, myPlayer)}
             ${playerTeam !== "" && player.type() !== PlayerType.Bot
@@ -390,7 +396,79 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
             )}
             ${this.displayUnitCount(player, UnitType.Warship, warshipIcon)}
           </div>
+          ${this.renderCompositionStats(player)}
         </div>
+      </div>
+    `;
+  }
+
+  private classLabel(c: TroopClass): string {
+    switch (c) {
+      case TroopClass.T1:
+        return "T1";
+      case TroopClass.T2:
+        return "T2";
+      case TroopClass.T3:
+        return "T3";
+    }
+  }
+
+  // T1 beats T2, T2 beats T3, T3 beats T1.
+  private strongAgainst(c: TroopClass): TroopClass {
+    return ((c + 1) % 3) as TroopClass;
+  }
+  private weakAgainst(c: TroopClass): TroopClass {
+    return ((c + 2) % 3) as TroopClass;
+  }
+
+  // Task 4(b): troop composition % + matchup info + net modifier vs my army.
+  private renderCompositionStats(player: PlayerView) {
+    const t1 = player.troopsByType(TroopClass.T1);
+    const t2 = player.troopsByType(TroopClass.T2);
+    const t3 = player.troopsByType(TroopClass.T3);
+    const total = t1 + t2 + t3;
+    if (total <= 0) return "";
+    const pct = (v: number) => Math.round((v / total) * 100);
+    const dominant = player.effectiveTroopClass();
+
+    const me = this.game.myPlayer();
+    let modLabel = "";
+    let modColor = "text-gray-300";
+    if (me && me.smallID() !== player.smallID()) {
+      const mod = me.combatModifierVs(player);
+      modLabel = mod.label;
+      modColor =
+        mod.multiplier > 1
+          ? "text-green-400"
+          : mod.multiplier < 1
+            ? "text-red-400"
+            : "text-gray-300";
+    }
+
+    return html`
+      <div
+        class="mt-1 px-1 py-0.5 border-t border-gray-600 text-[10px] lg:text-xs leading-tight"
+        translate="no"
+      >
+        <div class="flex items-center gap-1 flex-wrap">
+          <span
+            class="inline-block w-2.5 h-2.5 rounded-sm border border-white/40"
+            style="background-color: ${player.troopCompositionColor()}"
+          ></span>
+          <span class="text-red-300">T1 ${pct(t1)}%</span>
+          <span class="text-green-300">T2 ${pct(t2)}%</span>
+          <span class="text-blue-300">T3 ${pct(t3)}%</span>
+        </div>
+        <div class="text-gray-300">
+          ${this.classLabel(dominant)} strong vs
+          ${this.classLabel(this.strongAgainst(dominant))}, weak vs
+          ${this.classLabel(this.weakAgainst(dominant))}
+        </div>
+        ${modLabel !== ""
+          ? html`<div class="${modColor} font-bold">
+              vs your army: ${modLabel}
+            </div>`
+          : ""}
       </div>
     `;
   }

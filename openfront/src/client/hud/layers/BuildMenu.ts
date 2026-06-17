@@ -8,6 +8,7 @@ import {
   BuildMenus,
   Gold,
   PlayerBuildableUnitType,
+  Structures,
   UnitType,
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
@@ -102,15 +103,6 @@ export const buildTable: BuildItemDisplay[][] = [
       icon: shieldIcon,
       description: "build_menu.desc.defense_post",
       key: "unit_type.defense_post",
-      countable: true,
-    },
-    {
-      // NOTE: placeholder icon — reuses the shield/defense-post SVG.
-      // A dedicated ArtilleryPost asset should replace this (see DESIGN.md).
-      unitType: UnitType.ArtilleryPost,
-      icon: shieldIcon,
-      description: "build_menu.desc.artillery_post",
-      key: "unit_type.artillery_post",
       countable: true,
     },
     {
@@ -258,6 +250,46 @@ export class BuildMenu extends LitElement implements Controller {
     .hidden {
       display: none !important;
     }
+    .build-multi-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      margin-bottom: 8px;
+    }
+    .build-multi-label {
+      color: #aaa;
+      font-size: 13px;
+      margin-right: 2px;
+    }
+    .build-multi-button {
+      min-width: 34px;
+      height: 34px;
+      border: 1px solid #444;
+      background-color: #2c2c2c;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: bold;
+      transition: all 0.2s ease;
+    }
+    .build-multi-button:hover {
+      background-color: #3a3a3a;
+      border-color: #666;
+    }
+    .build-multi-button.selected {
+      background-color: #4a7dff;
+      border-color: #6f9bff;
+    }
+    @media (max-width: 480px) {
+      .build-multi-button {
+        min-width: 30px;
+        height: 30px;
+        font-size: 12px;
+      }
+    }
     .build-count-chip {
       position: absolute;
       top: -10px;
@@ -365,6 +397,19 @@ export class BuildMenu extends LitElement implements Controller {
   @state()
   private _hidden = true;
 
+  // Build-count multiplier: place this many structures per confirmed build.
+  private static readonly BUILD_MULTIPLIERS: readonly number[] = [
+    1, 2, 4, 8, 10, 20, 50,
+  ];
+
+  @state()
+  private _buildMultiplier = 1;
+
+  private setBuildMultiplier(n: number): void {
+    this._buildMultiplier = n;
+    this.requestUpdate();
+  }
+
   public canBuildOrUpgrade(item: BuildItemDisplay): boolean {
     if (this.game?.myPlayer() === null || this.playerBuildables === null) {
       return false;
@@ -405,11 +450,92 @@ export class BuildMenu extends LitElement implements Controller {
         buildableUnit.type === UnitType.HydrogenBomb
           ? this.uiState.rocketDirectionUp
           : undefined;
+      // Always place the first one at the clicked tile.
       this.eventBus.emit(
         new BuildUnitIntentEvent(buildableUnit.type, tile, rocketDirectionUp),
       );
+      // Build-multi: only for structures, and only if multiplier > 1.
+      if (
+        this._buildMultiplier > 1 &&
+        (Structures.types as readonly UnitType[]).includes(buildableUnit.type)
+      ) {
+        // Fire-and-forget; placements are validated per-tile.
+        void this.placeAdditional(
+          buildableUnit,
+          tile,
+          this._buildMultiplier - 1,
+        );
+      }
     }
     this.hideMenu();
+  }
+
+  /**
+   * Place up to `remaining` extra structures of the same type on the best
+   * nearby valid owned tiles, spread out from the origin. Stops early when
+   * gold runs out or no more valid tiles are found.
+   */
+  private async placeAdditional(
+    buildableUnit: BuildableUnit,
+    origin: TileRef,
+    remaining: number,
+  ): Promise<void> {
+    const player = this.game?.myPlayer();
+    if (!player || remaining <= 0) return;
+    const type = buildableUnit.type;
+
+    // Estimate available gold; per-unit cost grows, but the menu cost is a
+    // reasonable lower bound — accumulate conservatively.
+    let budget = player.gold();
+    const perUnitCost = buildableUnit.cost;
+
+    // Collect candidate owned tiles in expanding rings, spaced out so the
+    // structures don't all cluster on a single spot.
+    const mySmallID = player.smallID();
+    const ox = this.game.x(origin);
+    const oy = this.game.y(origin);
+    const spacing = 6; // min spacing between placements (Chebyshev-ish)
+    const maxRadius = 60;
+
+    const placed: { x: number; y: number }[] = [{ x: ox, y: oy }];
+    const candidates: TileRef[] = [];
+    for (let r = spacing; r <= maxRadius && candidates.length < 400; r += 2) {
+      for (let dx = -r; dx <= r; dx += spacing) {
+        for (let dy = -r; dy <= r; dy += spacing) {
+          // Only consider the ring perimeter to spread placements.
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+          const x = ox + dx;
+          const y = oy + dy;
+          if (!this.game.isValidCoord(x, y)) continue;
+          const t = this.game.ref(x, y);
+          const owner = this.game.owner(t);
+          if (!owner.isPlayer() || owner.smallID() !== mySmallID) continue;
+          // Respect spacing from already-chosen placements.
+          if (
+            placed.some(
+              (p) =>
+                Math.max(Math.abs(p.x - x), Math.abs(p.y - y)) < spacing,
+            )
+          ) {
+            continue;
+          }
+          candidates.push(t);
+          placed.push({ x, y });
+        }
+      }
+    }
+
+    for (const t of candidates) {
+      if (remaining <= 0) break;
+      if (perUnitCost > 0n && budget < perUnitCost) break;
+      // Confirm the structure can actually be built here.
+      const builds = await player.buildables(t, [type]);
+      const bu = builds.find((b) => b.type === type);
+      if (!bu || bu.canBuild === false) continue;
+      this.eventBus.emit(new BuildUnitIntentEvent(type, bu.canBuild));
+      budget -= perUnitCost;
+      remaining--;
+    }
   }
 
   render() {
@@ -418,6 +544,22 @@ export class BuildMenu extends LitElement implements Controller {
         class="build-menu ${this._hidden ? "hidden" : ""}"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
+        <div class="build-multi-row">
+          <span class="build-multi-label">x</span>
+          ${BuildMenu.BUILD_MULTIPLIERS.map(
+            (n) => html`
+              <button
+                class="build-multi-button ${this._buildMultiplier === n
+                  ? "selected"
+                  : ""}"
+                @click=${() => this.setBuildMultiplier(n)}
+                title="Place ${n} at once"
+              >
+                ${n}
+              </button>
+            `,
+          )}
+        </div>
         ${this.filteredBuildTable.map(
           (row) => html`
             <div class="build-row">

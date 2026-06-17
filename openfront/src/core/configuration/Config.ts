@@ -144,8 +144,15 @@ export class Config {
     return 90;
   }
 
-  defensePostRange(): number {
-    return 300;
+  // Base range at level 1; higher levels widen it by 15% per level.
+  defensePostRange(level: number = 1): number {
+    return 300 * (1 + 0.15 * (level - 1));
+  }
+
+  // Upper bound used to gather candidate posts before per-post range checks.
+  maxDefensePostRange(): number {
+    // Posts upgrade up to level 10 in practice; clamp generously.
+    return this.defensePostRange(10);
   }
 
   // Level-scaled defense bonus: 5 * 1.5^(level-1).
@@ -617,16 +624,26 @@ export class Config {
         throw new Error(`terrain type ${type} not supported`);
     }
     if (defender.isPlayer()) {
+      // Gather posts within the max possible (level-scaled) range, then keep
+      // the strongest owned post whose own level-scaled range covers the tile.
+      let bestDefenseBonus = 0;
       for (const dp of gm.nearbyUnits(
         tileToConquer,
-        gm.config().defensePostRange(),
+        gm.config().maxDefensePostRange(),
         UnitType.DefensePost,
       )) {
-        if (dp.unit.owner() === defender) {
-          mag *= this.defensePostDefenseBonus(dp.unit.level());
-          speed *= this.defensePostSpeedBonus();
-          break;
+        if (dp.unit.owner() !== defender) continue;
+        const level = dp.unit.level();
+        const range = this.defensePostRange(level);
+        if (dp.distSquared > range * range) continue;
+        const bonus = this.defensePostDefenseBonus(level);
+        if (bonus > bestDefenseBonus) {
+          bestDefenseBonus = bonus;
         }
+      }
+      if (bestDefenseBonus > 0) {
+        mag *= bestDefenseBonus;
+        speed *= this.defensePostSpeedBonus();
       }
     }
 
@@ -685,17 +702,17 @@ export class Config {
       let attackerTroopLoss =
         0.6 * currentAttackerLoss + 0.4 * altAttackerLoss;
 
-      // Stream B: rock-paper-scissors troop-type advantage (x1.66 / x0.602).
+      // Stream B: rock-paper-scissors troop-type advantage (x3 / x(1/3)).
       let scaledDefenderTroopLoss = defenderTroopLoss;
       if (attacker.isPlayer() && defender.isPlayer()) {
         const aClass = attacker.effectiveTroopClass();
         const dClass = defender.effectiveTroopClass();
         if (troopClassCounters(aClass, dClass)) {
-          scaledDefenderTroopLoss *= 1.66;
-          attackerTroopLoss *= 0.602;
+          scaledDefenderTroopLoss *= 3;
+          attackerTroopLoss *= 1 / 3;
         } else if (troopClassCounters(dClass, aClass)) {
-          scaledDefenderTroopLoss *= 0.602;
-          attackerTroopLoss *= 1.66;
+          scaledDefenderTroopLoss *= 1 / 3;
+          attackerTroopLoss *= 3;
         }
       }
 

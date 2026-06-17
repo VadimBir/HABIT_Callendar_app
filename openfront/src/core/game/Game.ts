@@ -189,7 +189,7 @@ export enum TrainType {
 }
 
 // Stream B: three troop types with a rock-paper-scissors counter relation.
-// T1 beats T2, T2 beats T3, T3 beats T1. Winner gets a x1.66 combat advantage.
+// T1 beats T2, T2 beats T3, T3 beats T1. Winner gets a x3 combat advantage.
 export enum TroopClass {
   T1 = 0,
   T2 = 1,

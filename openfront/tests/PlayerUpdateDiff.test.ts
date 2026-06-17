@@ -1,6 +1,12 @@
 import { AttackExecution } from "../src/core/execution/AttackExecution";
 import { SpawnExecution } from "../src/core/execution/SpawnExecution";
-import { Game, Player, PlayerInfo, PlayerType } from "../src/core/game/Game";
+import {
+  Game,
+  Player,
+  PlayerInfo,
+  PlayerType,
+  TroopClass,
+} from "../src/core/game/Game";
 import { GameUpdateType, PlayerUpdate } from "../src/core/game/GameUpdates";
 import { GameID } from "../src/core/Schemas";
 import { setup } from "./util/Setup";
@@ -93,10 +99,14 @@ describe("Player update diffing (toUpdate)", () => {
     // No object diff — gold alone must not put the player on the object
     // channel (that's the whole point of the packed stats channel).
     expect(diff).toBeNull();
+    // Mod: stats wire widened to 7 floats per player.
     expect(statsOut).toEqual([
       alice.smallID(),
       alice.numTilesOwned(),
       Number(alice.gold()),
+      alice.troopsByType(TroopClass.T1),
+      alice.troopsByType(TroopClass.T2),
+      alice.troopsByType(TroopClass.T3),
       alice.troops(),
     ]);
 

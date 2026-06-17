@@ -6,7 +6,13 @@
  */
 import { Executor } from "../src/core/execution/ExecutionManager";
 import { SpawnExecution } from "../src/core/execution/SpawnExecution";
-import { Game, Player, PlayerInfo, PlayerType } from "../src/core/game/Game";
+import {
+  Game,
+  Player,
+  PlayerInfo,
+  PlayerType,
+  TroopClass,
+} from "../src/core/game/Game";
 import {
   GameUpdateType,
   GameUpdateViewData,
@@ -134,17 +140,22 @@ describe("GameRunner payload cadence", () => {
     const gu = byTick.get(game.ticks())!;
     const packed = gu.packedPlayerUpdates;
     expect(packed).toBeDefined();
-    expect(packed!.length % 4).toBe(0);
-    let quad: number[] | undefined;
-    for (let i = 0; i + 3 < packed!.length; i += 4) {
+    // Mod: stats wire widened to 7 floats per player:
+    // [smallID, tilesOwned, gold, troopsT1, troopsT2, troopsT3, troopsTotal].
+    expect(packed!.length % 7).toBe(0);
+    let tuple: number[] | undefined;
+    for (let i = 0; i + 6 < packed!.length; i += 7) {
       if (packed![i] === alice.smallID()) {
-        quad = Array.from(packed!.subarray(i, i + 4));
+        tuple = Array.from(packed!.subarray(i, i + 7));
       }
     }
-    expect(quad).toEqual([
+    expect(tuple).toEqual([
       alice.smallID(),
       alice.numTilesOwned(),
       Number(alice.gold()),
+      alice.troopsByType(TroopClass.T1),
+      alice.troopsByType(TroopClass.T2),
+      alice.troopsByType(TroopClass.T3),
       alice.troops(),
     ]);
     // And the object channel no longer carries the stat fields: alice must

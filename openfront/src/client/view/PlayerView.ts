@@ -18,6 +18,7 @@ import {
   PlayerType,
   Team,
   Tick,
+  troopClassCounters,
   TroopClass,
   UnitType,
 } from "../../core/game/Game";
@@ -503,6 +504,66 @@ export class PlayerView {
       best = TroopClass.T3;
     }
     return best;
+  }
+
+  // Task 4: a color encoding this player's troop composition.
+  // R = T1 share, G = T2 share, B = T3 share (all-T1 red, all-T2 green,
+  // all-T3 blue, even mix ~gray). The max channel is capped by relationship
+  // to the viewing player so relation reads at a glance:
+  //   self up to 0xDD, allied up to 0x99, enemy up to 0x66.
+  troopCompositionColor(): string {
+    const t1 = this.troopsByType(TroopClass.T1);
+    const t2 = this.troopsByType(TroopClass.T2);
+    const t3 = this.troopsByType(TroopClass.T3);
+    const total = t1 + t2 + t3;
+    let r: number;
+    let g: number;
+    let b: number;
+    if (total <= 0) {
+      r = g = b = 0x80;
+    } else {
+      r = Math.round((t1 / total) * 255);
+      g = Math.round((t2 / total) * 255);
+      b = Math.round((t3 / total) * 255);
+    }
+    // Relationship brightness cap.
+    const me = this.game.myPlayer();
+    let cap = 0x66; // enemy / unknown
+    if (me) {
+      if (me.smallID() === this.smallID()) {
+        cap = 0xdd;
+      } else if (me.isFriendly(this)) {
+        cap = 0x99;
+      }
+    }
+    const maxChannel = Math.max(r, g, b, 1);
+    if (maxChannel > cap) {
+      const scale = cap / maxChannel;
+      r = Math.round(r * scale);
+      g = Math.round(g * scale);
+      b = Math.round(b * scale);
+    }
+    const hex = (v: number) =>
+      Math.max(0, Math.min(255, v)).toString(16).padStart(2, "0");
+    return `#${hex(r)}${hex(g)}${hex(b)}`;
+  }
+
+  // Task 4: net combat modifier of THIS player's army vs `other`'s army,
+  // using the rock-paper-scissors counter map (T1>T2>T3>T1).
+  // Returns the multiplier this player's attack gets against `other`.
+  combatModifierVs(other: PlayerView): {
+    multiplier: number;
+    label: string;
+  } {
+    const mine = this.effectiveTroopClass();
+    const theirs = other.effectiveTroopClass();
+    if (troopClassCounters(mine, theirs)) {
+      return { multiplier: 3, label: "+200% (x3)" };
+    }
+    if (troopClassCounters(theirs, mine)) {
+      return { multiplier: 1 / 3, label: "-67% (x1/3)" };
+    }
+    return { multiplier: 1, label: "Neutral" };
   }
 
   totalUnitLevels(type: UnitType): number {
