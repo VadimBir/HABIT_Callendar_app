@@ -625,6 +625,8 @@ export class ControlPanel extends LitElement implements Controller {
   @state()
   private _autoPort: boolean = false;
   @state()
+  private _autoExpand: boolean = false;
+  @state()
   private _selectedMultiplier: number = 1;
   @state()
   private _troopRatio0: number = 34;
@@ -659,6 +661,10 @@ export class ControlPanel extends LitElement implements Controller {
       case "port":
         this._autoPort = !this._autoPort;
         enabled = this._autoPort;
+        break;
+      case "expand":
+        this._autoExpand = !this._autoExpand;
+        enabled = this._autoExpand;
         break;
     }
     this.eventBus.emit(new SetAutoStructureEvent(category, enabled));
@@ -743,6 +749,12 @@ export class ControlPanel extends LitElement implements Controller {
             this._autoPort,
             () => this.toggleAutoStructure("port"),
             "Auto-build/upgrade PORTS only (spends gold, no attacking)",
+          )}
+          ${this.renderAutoToggle(
+            "Auto Expand",
+            this._autoExpand,
+            () => this.toggleAutoStructure("expand"),
+            "Auto-grab neutral/unclaimed land (no attacking other players)",
           )}
         </div>
         <!-- ROW 2: global build/nuke multiplier (single source of truth) -->

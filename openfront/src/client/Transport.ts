@@ -192,7 +192,12 @@ export class SetAutopilotEvent implements GameEvent {
 }
 
 // Toggle per-category auto-build (auto-spend gold on ONE structure type; no combat).
-export type AutoStructureCategory = "city" | "factory" | "sam" | "port";
+export type AutoStructureCategory =
+  | "city"
+  | "factory"
+  | "sam"
+  | "port"
+  | "expand";
 export class SetAutoStructureEvent implements GameEvent {
   constructor(
     public readonly category: AutoStructureCategory,

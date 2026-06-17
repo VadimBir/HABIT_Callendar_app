@@ -511,7 +511,7 @@ export const SetAutopilotIntentSchema = z.object({
 
 export const SetAutoStructureIntentSchema = z.object({
   type: z.literal("set_auto_structure"),
-  category: z.enum(["city", "factory", "sam", "port"]),
+  category: z.enum(["city", "factory", "sam", "port", "expand"]),
   enabled: z.boolean(),
 });
 

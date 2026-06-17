@@ -25,7 +25,7 @@ export class AutoStructureExecution implements Execution {
   private initialized = false;
   private tickCounter = 0;
   // Build/upgrade attempt cadence (ticks). Pure economy, fairly frequent.
-  private readonly actEvery = 20;
+  private readonly actEvery = 5; // 4x faster auto actions
 
   constructor(
     private player: Player,

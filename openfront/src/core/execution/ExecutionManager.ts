@@ -2,6 +2,7 @@ import { Execution, Game, UnitType } from "../game/Game";
 import { SetTroopRatioExecution } from "./SetTroopRatioExecution";
 import { AutopilotExecution } from "./AutopilotExecution";
 import { AutoStructureExecution } from "./AutoStructureExecution";
+import { AutoExpandExecution } from "./AutoExpandExecution";
 import { PseudoRandom } from "../PseudoRandom";
 import { ClientID, GameID, StampedIntent, Turn } from "../Schemas";
 import { simpleHash } from "../Util";
@@ -130,6 +131,9 @@ export class Executor {
       case "set_autopilot":
         return new AutopilotExecution(player, intent.enabled);
       case "set_auto_structure": {
+        if (intent.category === "expand") {
+          return new AutoExpandExecution(player, intent.enabled);
+        }
         const categoryToUnitType: Record<
           "city" | "factory" | "sam" | "port",
           UnitType
