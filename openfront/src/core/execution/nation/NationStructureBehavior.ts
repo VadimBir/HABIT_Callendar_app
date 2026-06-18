@@ -160,6 +160,34 @@ export class NationStructureBehavior {
     return this.maybeSpawnStructure(type);
   }
 
+  /**
+   * Auto-toggle path: PREFER upgrading existing structures of this type over
+   * building new ones. Cities/Factories/Ports/SAMs have no level cap, so once
+   * the player owns one we keep leveling it (saving up if we can't afford the
+   * upgrade yet) instead of carpeting the map with new buildings. Only builds a
+   * new one when the player owns none of this type yet (to bootstrap).
+   * Returns true if an upgrade/build was initiated.
+   */
+  autoUpgradeOrBuildType(type: UnitType): boolean {
+    if (this.game.config().isUnitDisabled(type)) return false;
+    const structures = this.player.units(type);
+    const upgradable = Boolean(this.game.config().unitInfo(type).upgradable);
+    if (upgradable && structures.length > 0) {
+      const best = this.findBestStructureToUpgrade(structures);
+      if (best !== null) {
+        this.game.addExecution(
+          new UpgradeStructureExecution(this.player, best.id()),
+        );
+        return true;
+      }
+      // Own structures but can't upgrade right now (e.g. saving up gold) —
+      // wait rather than building a new structure.
+      return false;
+    }
+    // None of this type yet (or not upgradable): build the first one.
+    return this.buildOrUpgradeType(type);
+  }
+
   handleStructures(): boolean {
     // Defense posts are handled outside the normal pacing/counter system:
     // they don't increment placementsCount or lastStructureTick, and they

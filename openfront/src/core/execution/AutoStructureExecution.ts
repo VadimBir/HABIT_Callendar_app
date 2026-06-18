@@ -93,7 +93,7 @@ export class AutoStructureExecution implements Execution {
           )
         : this.maxPerAct;
     for (let i = 0; i < batch; i++) {
-      if (!this.structureBehavior.buildOrUpgradeType(this.unitType)) break;
+      if (!this.structureBehavior.autoUpgradeOrBuildType(this.unitType)) break;
     }
   }
 
