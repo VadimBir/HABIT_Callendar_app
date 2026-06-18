@@ -37,8 +37,8 @@ export class AutopilotExecution implements Execution {
   private attackBehavior!: AiAttackBehavior;
 
   private tickCounter = 0;
-  // Act roughly every 50 ticks (mirrors the nation cadence ballpark).
-  private readonly actEvery = 50;
+  // ~3x faster: act every ~17 ticks (was 50). Half-cadence sub-action at ~8.
+  private readonly actEvery = 17;
 
   constructor(
     private player: Player,

@@ -46,8 +46,8 @@ export class AutoExpandExecution implements Execution {
   private random!: PseudoRandom;
   private initialized = false;
   private tickCounter = 0;
-  // 4x faster auto actions (mirrors AutoStructureExecution cadence).
-  private readonly actEvery = 5;
+  // ~3x faster than the old 5-tick cadence (mirrors AutoStructureExecution).
+  private readonly actEvery = 2;
 
   // Weighted build mix (user ratio ~ City 20 : Factory 5 : SAM 2 : Silo 1).
   // Expanded into a flat cycle so one structure is built per acting round at a
