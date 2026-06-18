@@ -5,7 +5,9 @@ import { NationStructureBehavior } from "./nation/NationStructureBehavior";
 
 /**
  * Per-category auto-build: spends the human player's gold to build OR upgrade
- * exactly ONE structure type (City / Factory / SAMLauncher / Port) on a cadence.
+ * one structure type (City / Factory / SAMLauncher / Port) on a cadence. The
+ * number built per act scales with the player's gold, so upgrades speed up as
+ * you get richer instead of crawling one-at-a-time.
  * Reuses the nation AI's placement + upgrade logic
  * (NationStructureBehavior.buildOrUpgradeType) so tile selection is sane. Does
  * NOT attack, expand, or send nukes (that's full Autopilot).
@@ -26,6 +28,8 @@ export class AutoStructureExecution implements Execution {
   private tickCounter = 0;
   // Build/upgrade attempt cadence (ticks). Pure economy, fairly frequent.
   private readonly actEvery = 2; // ~3x faster than the old 5-tick cadence
+  // Max structures built/upgraded per act (gold permitting). Caps lag spikes.
+  private readonly maxPerAct = 20;
 
   constructor(
     private player: Player,
@@ -75,8 +79,22 @@ export class AutoStructureExecution implements Execution {
 
     this.tickCounter++;
     if (this.tickCounter % this.actEvery !== 0) return;
-    // Spend gold to build/upgrade exactly this one structure type.
-    this.structureBehavior.buildOrUpgradeType(this.unitType);
+    // Gold-scaled batch: build/upgrade as many of this structure type as the
+    // player's gold can cover this act, so upgrade speed grows with wealth
+    // (rich = many per tick, broke = one). Capped so a huge stockpile can't
+    // lag-spike by placing on every tile at once. Construction deducts gold on
+    // the following tick, so we size the batch from current gold up front.
+    const unitCost = this.mg.unitInfo(this.unitType).cost(this.mg, this.player);
+    const batch =
+      unitCost > 0n
+        ? Math.max(
+            1,
+            Math.min(this.maxPerAct, Number(this.player.gold() / unitCost)),
+          )
+        : this.maxPerAct;
+    for (let i = 0; i < batch; i++) {
+      if (!this.structureBehavior.buildOrUpgradeType(this.unitType)) break;
+    }
   }
 
   isActive(): boolean {
