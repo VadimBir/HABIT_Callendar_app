@@ -1,4 +1,5 @@
 import { GameMapType, UnitType } from "../../core/game/Game";
+import { shippedMaps } from "../../core/game/ShippedMaps";
 import { GameConfig } from "../../core/Schemas";
 
 /**
@@ -124,9 +125,10 @@ export function getNationsForCompactMap(
 }
 
 export function getRandomMapType(): GameMapType {
-  const maps = Object.values(GameMapType);
-  const randIdx = Math.floor(Math.random() * maps.length);
-  return maps[randIdx] as GameMapType;
+  // Only randomize over maps actually bundled in this build so "Random map"
+  // never picks a non-shipped (blank/broken) map.
+  const randIdx = Math.floor(Math.random() * shippedMaps.length);
+  return shippedMaps[randIdx].type;
 }
 
 export function getUpdatedDisabledUnits(

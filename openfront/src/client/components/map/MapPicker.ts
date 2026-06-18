@@ -8,8 +8,8 @@ import {
   MapCategory,
   mapCategoryOrder,
   MapInfo,
-  maps,
 } from "../../../core/game/Game";
+import { shippedMaps as maps } from "../../../core/game/ShippedMaps";
 import { translateText } from "../../Utils";
 import "./MapDisplay";
 import { getFavoriteMaps, starIcon, toggleFavoriteMap } from "./MapFavorites";
