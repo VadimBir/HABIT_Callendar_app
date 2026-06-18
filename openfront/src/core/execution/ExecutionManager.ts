@@ -23,6 +23,7 @@ import { MarkDisconnectedExecution } from "./MarkDisconnectedExecution";
 import { MoveWarshipExecution } from "./MoveWarshipExecution";
 import { NationExecution } from "./NationExecution";
 import { NoOpExecution } from "./NoOpExecution";
+import { MirvExecution } from "./MIRVExecution";
 import { NukeExecution } from "./NukeExecution";
 import { PauseExecution } from "./PauseExecution";
 import { QuickChatExecution } from "./QuickChatExecution";
@@ -156,6 +157,19 @@ export class Executor {
         const nukeType = intent.nukeType;
         const rocketDirectionUp = intent.rocketDirectionUp ?? true;
         const execs: Execution[] = [];
+
+        // MIRV is itself a multi-warhead strike and MUST run through
+        // MirvExecution — a NukeExecution with type MIRV does not launch.
+        // (This was the ×N glitch: with count>1 the MIRV silently misfired.)
+        if (nukeType === UnitType.MIRV) {
+          execs.push(new MirvExecution(player, intent.tile));
+          if (count > 1) {
+            for (const t of this.spreadNukeTargets(intent.tile, count - 1)) {
+              execs.push(new MirvExecution(player, t));
+            }
+          }
+          return execs;
+        }
 
         // First nuke: normal path (uses a silo as usual, applies cooldown).
         execs.push(

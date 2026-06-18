@@ -82,4 +82,36 @@ describe("MultiNuke (silo-cooldown bypass)", () => {
     // Without the bypass this would be 1. We expect all N to fire.
     expect(spawned).toBe(COUNT);
   });
+
+  test("multi_nuke MIRV launches real MIRVs (×N glitch fix)", () => {
+    const COUNT = 3;
+    const executor = new Executor(game, gameID, "attacker_client");
+
+    const intent: StampedIntent = {
+      type: "multi_nuke",
+      nukeType: UnitType.MIRV,
+      tile: game.ref(60, 60),
+      count: COUNT,
+      rocketDirectionUp: true,
+      clientID: "attacker_client",
+    };
+
+    const execs = executor.createExec(intent);
+    const execArray = Array.isArray(execs) ? execs : [execs];
+    // One MirvExecution per requested MIRV (NOT NukeExecution, which never
+    // launches a MIRV — that was the silent ×N misfire).
+    expect(execArray.length).toBe(COUNT);
+    for (const e of execArray) {
+      game.addExecution(e);
+    }
+
+    executeTicks(game, 2);
+
+    const spawned = attacker.units(UnitType.MIRV).length;
+    // eslint-disable-next-line no-console
+    console.log(`multi_nuke MIRV spawned ${spawned} units (requested ${COUNT})`);
+
+    // Before the fix this was 0 (NukeExecution+MIRV never fires). Now it launches.
+    expect(spawned).toBeGreaterThan(0);
+  });
 });

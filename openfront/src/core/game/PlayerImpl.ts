@@ -1436,6 +1436,8 @@ export class PlayerImpl implements Player {
   ): TileRef | false {
     switch (unitType) {
       case UnitType.MIRV:
+        // Must still target someone's territory (yours or an enemy's), but it
+        // now launches even from a silo on cooldown — see nukeSpawn.
         if (!this.mg.hasOwner(targetTile)) {
           return false;
         }
@@ -1504,12 +1506,17 @@ export class PlayerImpl implements Player {
       }
     }
 
-    // only get missilesilos that are not on cooldown and not under construction
+    // Only use missile silos that are active and not under construction. Regular
+    // nukes still respect the silo cooldown; MIRV ignores cooldown so a player
+    // who fires often can still launch its big strike (matches expected play).
+    const ignoreCooldown = nukeType === UnitType.MIRV;
     const bestSilo = findClosestBy(
       this.units(UnitType.MissileSilo),
       (silo) => mg.manhattanDist(silo.tile(), tile),
       (silo) =>
-        silo.isActive() && !silo.isInCooldown() && !silo.isUnderConstruction(),
+        silo.isActive() &&
+        !silo.isUnderConstruction() &&
+        (ignoreCooldown || !silo.isInCooldown()),
     );
 
     return bestSilo?.tile() ?? false;
