@@ -1,6 +1,17 @@
-node_modules/
-www/
-android/
+# Android / Gradle build artifacts
+**/build/
+.gradle/
+etar/local.properties
+etar/captures/
+etar/.idea/
+
+# Legacy web experiment
+legacy-web/node_modules/
+legacy-web/www/
+legacy-web/android/
+
+# APKs (curated ones under docs/ are kept)
 *.apk
 !docs/*.apk
+
 .DS_Store

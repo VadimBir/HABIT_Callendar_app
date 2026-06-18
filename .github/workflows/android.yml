@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build HABIT (Etar) APK
 
 on:
   workflow_dispatch:
@@ -12,10 +12,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -23,32 +19,20 @@ jobs:
 
       - uses: android-actions/setup-android@v3
 
-      - name: Install dependencies
-        run: npm install
-
-      - name: Prepare web assets
-        run: npm run prepare:web
-
-      - name: Add Android platform
-        run: npx cap add android
-
-      - name: Sync Capacitor
-        run: npx cap sync android
-
       - name: Build debug APK
+        working-directory: etar
         run: |
-          cd android
           chmod +x gradlew
-          ./gradlew assembleDebug
+          ./gradlew :app:assembleDebug --no-daemon
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: HABIT-Calendar-debug-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: habit-etar-debug-apk
+          path: etar/app/build/outputs/apk/debug/app-debug.apk
 
       - name: Attach APK to release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: android/app/build/outputs/apk/debug/app-debug.apk
+          files: etar/app/build/outputs/apk/debug/app-debug.apk
