@@ -2,6 +2,11 @@
 
 A simple, adaptive calendar and task management app optimized for mobile (Android/iOS) and desktop.
 
+> The whole app lives in a single self-contained file: **`app.html`**. `index.html` just redirects to it.
+> Each day cell is a tiny `0:00 → 23:59` timeline: tasks render as proportional colour lines that flow
+> across consecutive days, lanes stay aligned day-to-day, and **future portions fade with a gradient**
+> so upcoming events read lighter than current ones.
+
 ## Features
 
 ### Core Functionality
@@ -35,8 +40,8 @@ A simple, adaptive calendar and task management app optimized for mobile (Androi
   - Progressive Web App (PWA)
   - Installable on Android/iOS
   - Touch gestures:
-    - Swipe left/right to change months
-    - Pinch to zoom calendar
+    - Swipe to travel in both X (days) and Y (weeks)
+    - Pinch **vertically** to stretch week height, **horizontally** to zoom into fewer days (anchored at the pinch point)
     - Drag divider to resize sections
   - Responsive design (mobile-first)
 
@@ -79,12 +84,17 @@ Standard calendar events with specific start and end times. Example: Meeting at 
 Tasks without a specific deadline that run until marked complete. Example: "Learn Spanish" - starts when created, ends when you mark it done.
 
 ### Dynamic Tasks
-Tasks with flexible deadlines that auto-postpone based on reminder type:
-- **D2D (Day to Day)**: Postpones by 1 day when reminder triggers
-- **W2W (Week to Week)**: Postpones by 1 week
-- **M2M (Month to Month)**: Postpones by 1 month
+Tasks with a flexible deadline. If the deadline lapses while the task is still undone, the deadline
+**auto-rolls forward exactly +1 day** each time. The original deadline stays put as a greyed, dashed
+**reference** on its original date (a "↪ was …" marker), while the live copy moves forward labelled
+`Task Name (+5d)` — so you always see both the original intent and the current state (two linked events).
 
-Shows original date and postponement count: `Task Name (+5 days)`
+The **reminder cadence** radio controls how reminders are spaced, not the roll amount:
+- **D2D (Day to Day)**: short reminders (minutes/hours before)
+- **W2W (Week to Week)**: medium reminders (hours/days before)
+- **M2M (Month to Month)**: long reminders (days/weeks before)
+
+The same cadence presets are also available to Fixed tasks.
 
 ## Technology Stack
 
@@ -158,17 +168,12 @@ Shows original date and postponement count: `Task Name (+5 days)`
 
 ```
 HABIT_Callendar_app/
-├── index.html           # Main HTML structure
-├── styles.css           # Responsive CSS styling
-├── app.js              # Main application controller
-├── storage.js          # LocalStorage manager
-├── notifications.js    # Notification handler
-├── tasks.js            # Task management logic
-├── calendar.js         # Calendar rendering
-├── gestures.js         # Touch gesture handlers
-├── manifest.json       # PWA manifest
-├── service-worker.js   # Service Worker for offline/notifications
-└── README.md          # This file
+├── app.html            # ★ The entire app (HTML + CSS + JS, self-contained)
+├── index.html          # Redirect to app.html
+├── manifest.json       # PWA manifest (start_url → app.html)
+├── service-worker.js   # Service Worker for offline support
+├── README.md           # This file
+└── (legacy modular files: styles.css, app.js, storage.js, …  — no longer used)
 ```
 
 ## Development Notes

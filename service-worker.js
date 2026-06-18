@@ -2,18 +2,12 @@
  * Service Worker - Handles offline caching and background notifications
  */
 
-const CACHE_NAME = 'habit-calendar-v1';
+const CACHE_NAME = 'habit-calendar-v2';
 const urlsToCache = [
-    '/',
-    '/index.html',
-    '/styles.css',
-    '/app.js',
-    '/storage.js',
-    '/notifications.js',
-    '/tasks.js',
-    '/calendar.js',
-    '/gestures.js',
-    '/manifest.json'
+    './',
+    'index.html',
+    'app.html',
+    'manifest.json'
 ];
 
 /**
