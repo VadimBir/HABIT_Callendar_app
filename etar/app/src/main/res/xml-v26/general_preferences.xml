@@ -144,4 +144,30 @@
             app:summary="@string/preferences_do_not_check_battery_optimization_summary" />
     </PreferenceCategory>
 
+    <PreferenceCategory app:title="@string/habit_category_title">
+        <SwitchPreference
+            app:key="pref_habit_enabled"
+            app:defaultValue="true"
+            app:title="@string/habit_enabled_title"
+            app:summary="@string/habit_enabled_summary" />
+        <ListPreference
+            app:key="pref_habit_cadence"
+            app:defaultValue="OFF"
+            app:title="@string/habit_cadence_title"
+            app:dialogTitle="@string/habit_cadence_dialog"
+            app:entries="@array/habit_cadence_labels"
+            app:entryValues="@array/habit_cadence_values"
+            app:useSimpleSummaryProvider="true" />
+        <SwitchPreference
+            app:key="pref_habit_dynamic_default"
+            app:defaultValue="false"
+            app:title="@string/habit_dynamic_default_title"
+            app:summary="@string/habit_dynamic_default_summary" />
+        <SwitchPreference
+            app:key="pref_habit_seamless_scroll"
+            app:defaultValue="true"
+            app:title="@string/habit_seamless_scroll_title"
+            app:summary="@string/habit_seamless_scroll_summary" />
+    </PreferenceCategory>
+
 </PreferenceScreen>

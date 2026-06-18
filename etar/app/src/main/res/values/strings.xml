@@ -15,9 +15,20 @@
 -->
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <!-- This is the app label used for alert notifications -->
-    <string name="standalone_app_label" translatable="false">Etar</string>
+    <string name="standalone_app_label" translatable="false">HABIT</string>
     <!-- This is the label underneath the icon for Calendar -->
     <string name="app_label">Calendar</string>
+
+    <!-- HABIT custom feature strings -->
+    <string name="habit_category_title" translatable="false">HABIT features</string>
+    <string name="habit_enabled_title" translatable="false">Enable HABIT features</string>
+    <string name="habit_enabled_summary" translatable="false">Master switch for the custom HABIT behaviours below.</string>
+    <string name="habit_cadence_title" translatable="false">Reminder cadence</string>
+    <string name="habit_cadence_dialog" translatable="false">Default reminder cadence</string>
+    <string name="habit_dynamic_default_title" translatable="false">New events dynamic by default</string>
+    <string name="habit_dynamic_default_summary" translatable="false">Dynamic deadlines auto-roll +1 day if the event lapses undone, keeping the original as a reference.</string>
+    <string name="habit_seamless_scroll_title" translatable="false">Seamless week scrolling</string>
+    <string name="habit_seamless_scroll_summary" translatable="false">Scroll weeks smoothly left/right instead of snapping page by page.</string>
 
     <!-- Shared Labels. These labels are shared among the activities. -->
     <skip/>

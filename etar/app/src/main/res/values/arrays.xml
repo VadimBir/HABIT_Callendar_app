@@ -14,6 +14,19 @@
      limitations under the License.
 -->
 <resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- HABIT reminder cadence -->
+    <string-array name="habit_cadence_labels" translatable="false">
+        <item>Off</item>
+        <item>D2D (day to day)</item>
+        <item>W2W (week to week)</item>
+        <item>M2M (month to month)</item>
+    </string-array>
+    <string-array name="habit_cadence_values" translatable="false">
+        <item>OFF</item>
+        <item>D2D</item>
+        <item>W2W</item>
+        <item>M2M</item>
+    </string-array>
     <string-array name="pref_theme_entries" translatable="false" tools:ignore="InconsistentArrays">
         <item>@string/preferences_light_theme</item>
         <item>@string/preferences_dark_theme</item>
