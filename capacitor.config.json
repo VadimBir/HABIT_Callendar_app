@@ -1,0 +1,8 @@
+{
+  "appId": "com.habit.calendar",
+  "appName": "HABIT Calendar",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": true
+  }
+}
