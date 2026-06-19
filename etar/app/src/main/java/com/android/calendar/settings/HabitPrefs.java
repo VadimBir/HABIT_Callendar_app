@@ -153,4 +153,116 @@ public class HabitPrefs {
         }
         prefs(context).edit().putString(KEY_CUSTOM_PRESETS, arr.toString()).apply();
     }
+
+    // ----- Templates (deep-copyable events) -----
+
+    private static final String KEY_TEMPLATES = "pref_habit_templates";
+
+    /** A reusable event template: a deep copy of an event's key fields. */
+    public static class Template {
+        public final String title;
+        public final String description;
+        public final String location;
+        public final long durationMinutes;
+        public final boolean allDay;
+        public final int[] minutes;
+
+        public Template(String title, String description, String location,
+                        long durationMinutes, boolean allDay, int[] minutes) {
+            this.title = title == null ? "" : title;
+            this.description = description == null ? "" : description;
+            this.location = location == null ? "" : location;
+            this.durationMinutes = durationMinutes;
+            this.allDay = allDay;
+            this.minutes = minutes == null ? new int[0] : minutes;
+        }
+    }
+
+    public static List<Template> getTemplates(Context context) {
+        List<Template> list = new ArrayList<>();
+        String json = prefs(context).getString(KEY_TEMPLATES, null);
+        if (json == null) {
+            return list;
+        }
+        try {
+            JSONArray arr = new JSONArray(json);
+            for (int i = 0; i < arr.length(); i++) {
+                JSONObject o = arr.getJSONObject(i);
+                JSONArray m = o.optJSONArray("minutes");
+                int[] minutes = new int[m == null ? 0 : m.length()];
+                for (int j = 0; j < minutes.length; j++) {
+                    minutes[j] = m.getInt(j);
+                }
+                list.add(new Template(
+                        o.optString("title", ""),
+                        o.optString("description", ""),
+                        o.optString("location", ""),
+                        o.optLong("durationMinutes", 60),
+                        o.optBoolean("allDay", false),
+                        minutes));
+            }
+        } catch (Exception e) {
+            // ignore
+        }
+        return list;
+    }
+
+    public static void saveTemplates(Context context, List<Template> templates) {
+        JSONArray arr = new JSONArray();
+        try {
+            for (Template t : templates) {
+                JSONObject o = new JSONObject();
+                o.put("title", t.title);
+                o.put("description", t.description);
+                o.put("location", t.location);
+                o.put("durationMinutes", t.durationMinutes);
+                o.put("allDay", t.allDay);
+                JSONArray m = new JSONArray();
+                for (int v : t.minutes) {
+                    m.put(v);
+                }
+                o.put("minutes", m);
+                arr.put(o);
+            }
+        } catch (Exception e) {
+            return;
+        }
+        prefs(context).edit().putString(KEY_TEMPLATES, arr.toString()).apply();
+    }
+
+    public static boolean hasTemplateTitle(Context context, String title) {
+        if (title == null) {
+            return false;
+        }
+        for (Template t : getTemplates(context)) {
+            if (title.equals(t.title)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Add (or replace by title) a template. */
+    public static void addTemplate(Context context, Template template) {
+        List<Template> list = getTemplates(context);
+        for (int i = 0; i < list.size(); i++) {
+            if (list.get(i).title.equals(template.title)) {
+                list.set(i, template);
+                saveTemplates(context, list);
+                return;
+            }
+        }
+        list.add(template);
+        saveTemplates(context, list);
+    }
+
+    public static void removeTemplateByTitle(Context context, String title) {
+        List<Template> list = getTemplates(context);
+        for (int i = list.size() - 1; i >= 0; i--) {
+            if (list.get(i).title.equals(title)) {
+                list.remove(i);
+            }
+        }
+        saveTemplates(context, list);
+    }
 }

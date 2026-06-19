@@ -121,6 +121,7 @@ import com.android.calendar.icalendar.Organizer;
 import com.android.calendar.icalendar.VCalendar;
 import com.android.calendar.icalendar.VEvent;
 import com.android.calendar.settings.GeneralPreferences;
+import com.android.calendar.settings.HabitPrefs;
 import com.android.calendar.calendarcommon2.DateException;
 import com.android.calendar.calendarcommon2.Duration;
 import com.android.calendar.calendarcommon2.EventRecurrence;
@@ -1164,6 +1165,8 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
             shareEvent(ShareType.EXPORT_SAF);
         } else if (itemId == R.id.info_action_duplicate) {
             duplicateEvent();
+        } else if (itemId == R.id.info_action_template) {
+            toggleTemplate(item);
         }
         return super.onOptionsItemSelected(item);
     }
@@ -1946,6 +1949,40 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
         if (changeColor != null && mColors != null && mColors.length > 0) {
             changeColor.setVisible(mCanModifyCalendar);
             changeColor.setEnabled(mCanModifyCalendar);
+        }
+        MenuItem template = mMenu.findItem(R.id.info_action_template);
+        if (template != null && mEventCursor != null) {
+            String title = mEventCursor.getString(EVENT_INDEX_TITLE);
+            template.setChecked(HabitPrefs.hasTemplateTitle(mContext, title));
+        }
+    }
+
+    /**
+     * HABIT: toggle whether this event is saved as a reusable template. Templates
+     * appear in the new-event chooser and open the editor as a deep copy.
+     */
+    private void toggleTemplate(MenuItem item) {
+        if (mEventCursor == null) {
+            return;
+        }
+        String title = mEventCursor.getString(EVENT_INDEX_TITLE);
+        if (HabitPrefs.hasTemplateTitle(mContext, title)) {
+            HabitPrefs.removeTemplateByTitle(mContext, title);
+            item.setChecked(false);
+            Toast.makeText(mContext, R.string.habit_template_removed, Toast.LENGTH_SHORT).show();
+        } else {
+            String desc = mEventCursor.getString(EVENT_INDEX_DESCRIPTION);
+            String loc = mEventCursor.getString(EVENT_INDEX_EVENT_LOCATION);
+            long durationMin = Math.max(0, (mEndMillis - mStartMillis) / 60000);
+            int n = mReminders == null ? 0 : mReminders.size();
+            int[] mins = new int[n];
+            for (int i = 0; i < n; i++) {
+                mins[i] = mReminders.get(i).getMinutes();
+            }
+            HabitPrefs.addTemplate(mContext, new HabitPrefs.Template(
+                    title, desc, loc, durationMin, mAllDay, mins));
+            item.setChecked(true);
+            Toast.makeText(mContext, R.string.habit_template_saved, Toast.LENGTH_SHORT).show();
         }
     }
 

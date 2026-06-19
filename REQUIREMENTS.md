@@ -22,10 +22,11 @@ Status legend: ✅ done & verified · 🟡 partial/in progress · ❌ not starte
         funnel: FAB + day/week grid taps), so it appears in the week view too.
 - R11 ✅ Chooser has a "Create event" button.
 - R12 ✅ Reminder-preset selection is CHECKBOXES, MULTI-SELECT (any number).
-- R13 ❌ Chooser shows a TEMPLATE LIST (only if ≥1 template). Next checkpoint.
+- R13 ✅ Chooser shows a TEMPLATE LIST on the right (only when ≥1 template).
 - R14 ✅ "Create event" opens the editor with the union of the checked presets'
         reminders pre-filled; user can still add/remove more.
-- R15 ❌ Picking a TEMPLATE opens the editor as a DEEP COPY. Next checkpoint.
+- R15 ✅ Picking a TEMPLATE opens the editor as a DEEP COPY (title, description,
+        location, duration, all-day, reminders).
 
 ## Reminder presets
 - R20 ✅ User can define ANY NUMBER of named presets (preset manager).
@@ -37,10 +38,10 @@ Status legend: ✅ done & verified · 🟡 partial/in progress · ❌ not starte
 - R24 ✅ Presets persisted (JSON store in HabitPrefs).
 
 ## Templates
-- R30 ❌ In the event editor there is a "Save as template" control (checkbox/menu)
-        to mark the current event as a template.
-- R31 ❌ Templates are stored (deep copy of the event's fields).
-- R32 ❌ Templates are listed in the new-event chooser (see R13/R15).
+- R30 ✅ Event preview (EventInfoFragment) has a checkable "Save as template"
+        control that marks the current event as a template.
+- R31 ✅ Templates stored as a deep copy of fields (HabitPrefs templates JSON).
+- R32 ✅ Templates listed in the new-event chooser (see R13/R15).
 
 ## Dynamic deadlines
 - R40 ❌ An event can be marked "dynamic": if its deadline lapses while not done,

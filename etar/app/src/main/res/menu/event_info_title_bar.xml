@@ -46,4 +46,8 @@
         android:icon="@drawable/outline_color_lens"
         android:title="@string/choose_event_color_label"
         app:showAsAction="ifRoom" />
+    <item android:id="@+id/info_action_template"
+        android:checkable="true"
+        android:title="@string/habit_save_as_template"
+        app:showAsAction="never" />
 </menu>

@@ -1,21 +1,28 @@
 /*
  * HABIT: intermediate "new event" chooser shown before the event editor.
  *
- * Presented for every create-event path (FAB, grid tap, …) because it is invoked
- * from CalendarController.launchCreateEvent, the single funnel for new events.
+ * Invoked from CalendarController.launchCreateEvent (the single funnel for all
+ * new-event creation: FAB, day/week grid taps), so it appears from every "+".
  *
- * It lets the user multi-select reminder presets; the union of the checked
- * presets' reminders is pre-filled into the editor. (Templates: see REQUIREMENTS
- * R13/R15 — added in a following checkpoint.)
+ * Left column: reminder presets as multi-select checkboxes — the union of the
+ * checked presets' reminders is pre-filled into the editor.
+ * Right column (only if any exist): templates — tapping one opens the editor as
+ * a deep copy of that template.
  */
 package com.android.calendar;
 
 import android.app.Activity;
 import android.content.Intent;
-import android.view.View;
+import android.provider.CalendarContract;
+import android.provider.CalendarContract.Events;
+import android.view.Gravity;
+import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+
+import androidx.appcompat.app.AlertDialog;
 
 import com.android.calendar.CalendarEventModel.ReminderEntry;
 import com.android.calendar.event.EditEventActivity;
@@ -30,35 +37,68 @@ import ws.xsoh.etar.R;
 
 public class HabitEventChooser {
 
-    /**
-     * Show the chooser. On "Create event" the given base intent (already built by
-     * CalendarController.generateCreateEventIntent) is augmented with the selected
-     * reminders and used to launch the editor.
-     */
     public static void show(final Activity activity, final Intent baseIntent) {
         final List<HabitPrefs.Preset> presets = HabitPrefs.getPresets(activity);
+        final List<HabitPrefs.Template> templates = HabitPrefs.getTemplates(activity);
 
-        LinearLayout container = new LinearLayout(activity);
-        container.setOrientation(LinearLayout.VERTICAL);
-        int pad = (int) (20 * activity.getResources().getDisplayMetrics().density);
-        container.setPadding(pad, pad / 2, pad, 0);
+        int pad = (int) (16 * activity.getResources().getDisplayMetrics().density);
+
+        LinearLayout columns = new LinearLayout(activity);
+        columns.setOrientation(LinearLayout.HORIZONTAL);
+        columns.setPadding(pad, pad / 2, pad, 0);
+
+        // ---- Left column: preset checkboxes ----
+        LinearLayout left = new LinearLayout(activity);
+        left.setOrientation(LinearLayout.VERTICAL);
+        left.setLayoutParams(new LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
         TextView hint = new TextView(activity);
         hint.setText(R.string.habit_chooser_hint);
-        container.addView(hint);
+        left.addView(hint);
 
         final ArrayList<CheckBox> boxes = new ArrayList<>();
         for (HabitPrefs.Preset p : presets) {
             CheckBox cb = new CheckBox(activity);
             cb.setText(p.name + "  (" + describeMinutes(p.minutes) + ")");
-            container.addView(cb);
+            left.addView(cb);
             boxes.add(cb);
         }
+        columns.addView(left);
 
-        new MaterialAlertDialogBuilder(activity)
+        final AlertDialog[] holder = new AlertDialog[1];
+
+        // ---- Right column: templates (only if any) ----
+        if (!templates.isEmpty()) {
+            LinearLayout right = new LinearLayout(activity);
+            right.setOrientation(LinearLayout.VERTICAL);
+            right.setLayoutParams(new LinearLayout.LayoutParams(
+                    0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+            right.setPadding(pad, 0, 0, 0);
+
+            TextView tLabel = new TextView(activity);
+            tLabel.setText(R.string.habit_templates_label);
+            right.addView(tLabel);
+
+            for (final HabitPrefs.Template t : templates) {
+                Button b = new Button(activity);
+                b.setText(t.title);
+                b.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+                b.setOnClickListener(v -> {
+                    launchFromTemplate(activity, baseIntent, t);
+                    if (holder[0] != null) {
+                        holder[0].dismiss();
+                    }
+                });
+                right.addView(b);
+            }
+            columns.addView(right);
+        }
+
+        AlertDialog dialog = new MaterialAlertDialogBuilder(activity)
                 .setTitle(R.string.habit_chooser_title)
-                .setView(container)
-                .setPositiveButton(R.string.habit_chooser_create, (dialog, which) -> {
+                .setView(columns)
+                .setPositiveButton(R.string.habit_chooser_create, (d, w) -> {
                     LinkedHashSet<Integer> mins = new LinkedHashSet<>();
                     for (int i = 0; i < boxes.size(); i++) {
                         if (boxes.get(i).isChecked()) {
@@ -77,7 +117,32 @@ public class HabitEventChooser {
                     activity.startActivity(baseIntent);
                 })
                 .setNegativeButton(android.R.string.cancel, null)
-                .show();
+                .create();
+        holder[0] = dialog;
+        dialog.show();
+    }
+
+    private static void launchFromTemplate(Activity activity, Intent baseIntent,
+                                           HabitPrefs.Template t) {
+        long begin = baseIntent.getLongExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME,
+                System.currentTimeMillis());
+        long end = begin + t.durationMinutes * 60000L;
+
+        Intent intent = new Intent(activity, EditEventActivity.class);
+        intent.putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, begin);
+        intent.putExtra(CalendarContract.EXTRA_EVENT_END_TIME, end);
+        intent.putExtra(CalendarContract.EXTRA_EVENT_ALL_DAY, t.allDay);
+        intent.putExtra(Events.TITLE, t.title);
+        intent.putExtra(Events.DESCRIPTION, t.description);
+        intent.putExtra(Events.EVENT_LOCATION, t.location);
+        if (t.minutes.length > 0) {
+            ArrayList<ReminderEntry> reminders = new ArrayList<>();
+            for (int m : t.minutes) {
+                reminders.add(ReminderEntry.valueOf(m));
+            }
+            intent.putExtra(EditEventActivity.EXTRA_EVENT_REMINDERS, reminders);
+        }
+        activity.startActivity(intent);
     }
 
     private static String describeMinutes(int[] minutes) {
