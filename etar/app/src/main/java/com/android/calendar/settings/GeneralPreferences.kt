@@ -126,6 +126,13 @@ class GeneralPreferences : PreferenceFragmentCompat(),
         copyDbPref = preferenceScreen.findPreference(KEY_OTHER_COPY_DB)!!
         skipRemindersPref = preferenceScreen.findPreference(KEY_OTHER_REMINDERS_RESPONDED)!!
 
+        // HABIT: open the reminder-preset manager.
+        preferenceScreen.findPreference<Preference>("pref_habit_manage_presets")
+                ?.setOnPreferenceClickListener {
+                    startActivity(Intent(requireContext(), HabitPresetsActivity::class.java))
+                    true
+                }
+
         val prefs = CalendarUtils.getSharedPreferences(requireActivity(),
                 Utils.SHARED_PREFS_NAME)
 

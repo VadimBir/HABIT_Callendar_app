@@ -86,14 +86,27 @@ public class HabitPrefs {
         }
     }
 
-    /** All presets shown in the new-event chooser, built-ins first. */
+    /**
+     * All presets shown in the new-event chooser and the preset manager. Fully
+     * user-editable: on first use the store is seeded with D2D/W2W/M2M, after
+     * which everything (add/edit/delete/rename, any number of reminders each)
+     * lives in the same JSON store.
+     */
     public static List<Preset> getPresets(Context context) {
-        List<Preset> list = new ArrayList<>();
-        list.add(new Preset("D2D", new int[]{getCadenceDefaultMinutes(context, CADENCE_D2D)}));
-        list.add(new Preset("W2W", new int[]{getCadenceDefaultMinutes(context, CADENCE_W2W)}));
-        list.add(new Preset("M2M", new int[]{getCadenceDefaultMinutes(context, CADENCE_M2M)}));
-        list.addAll(getCustomPresets(context));
+        List<Preset> list = getCustomPresets(context);
+        if (list.isEmpty()) {
+            list = defaultPresets();
+            saveCustomPresets(context, list);
+        }
         return list;
+    }
+
+    private static List<Preset> defaultPresets() {
+        List<Preset> l = new ArrayList<>();
+        l.add(new Preset("D2D", new int[]{1440}));    // 1 day before
+        l.add(new Preset("W2W", new int[]{10080}));   // 1 week before
+        l.add(new Preset("M2M", new int[]{43200}));   // 30 days before
+        return l;
     }
 
     /** User-defined presets, stored as JSON: [{"name":..,"minutes":[..]}, ...]. */

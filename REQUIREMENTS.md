@@ -17,26 +17,24 @@ Status legend: ✅ done & verified · 🟡 partial/in progress · ❌ not starte
 - R8 🟡 Bump versionCode on each build so sideload installs always update.
 
 ## New-event flow (intermediate chooser)
-- R10 🟡 Tapping "+" (from ANY view / create path) opens an INTERMEDIATE chooser
-        screen BEFORE the event editor. (Bugfix: must appear from week view too.)
-- R11 🟡 Chooser has a "Create new event" button.
-- R12 🟡 Chooser has reminder-preset selection as CHECKBOXES, MULTI-SELECT
-        (tick any number). NOT radio, NOT a single-pick list.
-- R13 ❌ Chooser shows a TEMPLATE LIST (only if ≥1 event was ever saved as a
-        template). Templates appear to the right of the preset checkboxes.
-- R14 🟡 Picking "Create new event" opens the editor with the union of the
-        checked presets' reminders pre-filled (user can still add/remove more).
-- R15 ❌ Picking a TEMPLATE opens the editor as a DEEP COPY of that template
-        (title, description, location, duration, calendar, color, reminders, …).
+- R10 ✅ Tapping "+" (from ANY view / create path) opens an INTERMEDIATE chooser
+        before the editor — now via CalendarController.launchCreateEvent (single
+        funnel: FAB + day/week grid taps), so it appears in the week view too.
+- R11 ✅ Chooser has a "Create event" button.
+- R12 ✅ Reminder-preset selection is CHECKBOXES, MULTI-SELECT (any number).
+- R13 ❌ Chooser shows a TEMPLATE LIST (only if ≥1 template). Next checkpoint.
+- R14 ✅ "Create event" opens the editor with the union of the checked presets'
+        reminders pre-filled; user can still add/remove more.
+- R15 ❌ Picking a TEMPLATE opens the editor as a DEEP COPY. Next checkpoint.
 
 ## Reminder presets
-- R20 ❌ User can define ANY NUMBER of named reminder presets (e.g. 5, 8, 10…),
-        not just the three built-ins.
-- R21 ❌ Each preset can contain ANY NUMBER of reminders (each with its own
-        amount + unit: minutes/hours/days/weeks). No fixed pick-list limitation.
-- R22 🟡 Built-in presets D2D / W2W / M2M exist and are editable.
-- R23 ❌ Settings UI to add / edit / rename / delete presets and their reminders.
-- R24 ✅ Presets are persisted (JSON store in HabitPrefs).
+- R20 ✅ User can define ANY NUMBER of named presets (preset manager).
+- R21 ✅ Each preset holds ANY NUMBER of reminders, each amount + unit
+        (minutes/hours/days/weeks). No fixed pick-list.
+- R22 ✅ D2D / W2W / M2M seeded as editable presets in the same store.
+- R23 ✅ Settings → "Manage reminder presets": add / edit / rename / delete
+        presets and their reminders (HabitPresetsActivity).
+- R24 ✅ Presets persisted (JSON store in HabitPrefs).
 
 ## Templates
 - R30 ❌ In the event editor there is a "Save as template" control (checkbox/menu)
@@ -57,7 +55,9 @@ Status legend: ✅ done & verified · 🟡 partial/in progress · ❌ not starte
 
 ## Settings (HABIT features category)
 - R60 ✅ Master "Enable HABIT features" switch.
-- R61 🟡 Edit default reminder for built-in presets (currently fixed pick-list;
-        must become free-form per R21/R23).
-- R62 🟡 "New events dynamic by default" toggle (wiring pending, see R42).
-- R63 🟡 "Seamless week scrolling" toggle (behaviour deferred, see R50).
+- R61 ✅ Presets fully editable via the preset manager (replaced the fixed
+        pick-list ListPreferences).
+- R62 ❌ "New events dynamic by default" toggle persists but is read nowhere yet
+        (dead pref — wiring comes with R40/R41).
+- R63 ❌ "Seamless week scrolling" toggle persists but is read nowhere (deferred
+        with R50).

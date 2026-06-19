@@ -34,6 +34,17 @@
     <string name="habit_chooser_title" translatable="false">New event</string>
     <string name="habit_chooser_hint" translatable="false">Tick reminder presets to pre-fill (you can still add more in the editor):</string>
     <string name="habit_chooser_create" translatable="false">Create event</string>
+    <string name="habit_manage_presets_title" translatable="false">Manage reminder presets</string>
+    <string name="habit_manage_presets_summary" translatable="false">Create any number of presets, each with any number of reminders.</string>
+    <string name="habit_preset_add" translatable="false">Add preset</string>
+    <string name="habit_preset_edit" translatable="false">Edit</string>
+    <string name="habit_preset_delete" translatable="false">Delete</string>
+    <string name="habit_preset_none" translatable="false">No presets yet. Tap “Add preset”.</string>
+    <string name="habit_preset_name_hint" translatable="false">Preset name (e.g. Exam prep)</string>
+    <string name="habit_preset_default_name" translatable="false">Preset</string>
+    <string name="habit_preset_reminders_label" translatable="false">Reminders before due:</string>
+    <string name="habit_preset_add_reminder" translatable="false">Add reminder</string>
+    <string name="habit_preset_no_reminders" translatable="false">no reminders</string>
     <string name="habit_dynamic_default_title" translatable="false">New events dynamic by default</string>
     <string name="habit_dynamic_default_summary" translatable="false">Dynamic deadlines auto-roll +1 day if the event lapses undone, keeping the original as a reference.</string>
     <string name="habit_seamless_scroll_title" translatable="false">Seamless week scrolling</string>
