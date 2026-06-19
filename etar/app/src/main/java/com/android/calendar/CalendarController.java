@@ -41,6 +41,7 @@ import android.util.Pair;
 
 import com.android.calendar.event.EditEventActivity;
 import com.android.calendar.settings.GeneralPreferences;
+import com.android.calendar.settings.HabitPrefs;
 import com.android.calendar.settings.SettingsActivity;
 import com.android.calendar.calendarcommon2.Time;
 
@@ -560,7 +561,13 @@ public class CalendarController {
         Intent intent = generateCreateEventIntent(startMillis, endMillis, allDayEvent, title,
                 calendarId);
         mEventId = -1;
-        mContext.startActivity(intent);
+        // HABIT: route every new-event creation through the intermediate chooser
+        // (multi-select reminder presets) when HABIT features are enabled.
+        if (mContext instanceof Activity && HabitPrefs.isEnabled(mContext)) {
+            HabitEventChooser.show((Activity) mContext, intent);
+        } else {
+            mContext.startActivity(intent);
+        }
     }
 
     public Intent generateCreateEventIntent(long startMillis, long endMillis,
