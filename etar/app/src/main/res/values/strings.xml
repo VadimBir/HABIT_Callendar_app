@@ -31,6 +31,9 @@
     <string name="habit_cadence_d2d_title" translatable="false">D2D default reminder</string>
     <string name="habit_cadence_w2w_title" translatable="false">W2W default reminder</string>
     <string name="habit_cadence_m2m_title" translatable="false">M2M default reminder</string>
+    <string name="habit_chooser_title" translatable="false">New event</string>
+    <string name="habit_chooser_hint" translatable="false">Tick reminder presets to pre-fill (you can still add more in the editor):</string>
+    <string name="habit_chooser_create" translatable="false">Create event</string>
     <string name="habit_dynamic_default_title" translatable="false">New events dynamic by default</string>
     <string name="habit_dynamic_default_summary" translatable="false">Dynamic deadlines auto-roll +1 day if the event lapses undone, keeping the original as a reference.</string>
     <string name="habit_seamless_scroll_title" translatable="false">Seamless week scrolling</string>

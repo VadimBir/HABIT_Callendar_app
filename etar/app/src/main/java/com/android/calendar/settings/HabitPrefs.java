@@ -10,6 +10,12 @@ package com.android.calendar.settings;
 import android.content.Context;
 import android.content.SharedPreferences;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.util.ArrayList;
+import java.util.List;
+
 public class HabitPrefs {
 
     public static final String KEY_ENABLED = "pref_habit_enabled";
@@ -63,5 +69,75 @@ public class HabitPrefs {
         } catch (NumberFormatException e) {
             return CADENCE_DEFAULTS[cadence];
         }
+    }
+
+    // ----- Reminder presets (built-in D2D/W2W/M2M + user-defined) -----
+
+    private static final String KEY_CUSTOM_PRESETS = "pref_habit_custom_presets";
+
+    /** A named reminder preset: a label plus the reminder lead-times it sets. */
+    public static class Preset {
+        public final String name;
+        public final int[] minutes;
+
+        public Preset(String name, int[] minutes) {
+            this.name = name;
+            this.minutes = minutes;
+        }
+    }
+
+    /** All presets shown in the new-event chooser, built-ins first. */
+    public static List<Preset> getPresets(Context context) {
+        List<Preset> list = new ArrayList<>();
+        list.add(new Preset("D2D", new int[]{getCadenceDefaultMinutes(context, CADENCE_D2D)}));
+        list.add(new Preset("W2W", new int[]{getCadenceDefaultMinutes(context, CADENCE_W2W)}));
+        list.add(new Preset("M2M", new int[]{getCadenceDefaultMinutes(context, CADENCE_M2M)}));
+        list.addAll(getCustomPresets(context));
+        return list;
+    }
+
+    /** User-defined presets, stored as JSON: [{"name":..,"minutes":[..]}, ...]. */
+    public static List<Preset> getCustomPresets(Context context) {
+        List<Preset> list = new ArrayList<>();
+        String json = prefs(context).getString(KEY_CUSTOM_PRESETS, null);
+        if (json == null) {
+            return list;
+        }
+        try {
+            JSONArray arr = new JSONArray(json);
+            for (int i = 0; i < arr.length(); i++) {
+                JSONObject o = arr.getJSONObject(i);
+                String name = o.optString("name", "Preset");
+                JSONArray m = o.optJSONArray("minutes");
+                int[] minutes = new int[m == null ? 0 : m.length()];
+                for (int j = 0; j < minutes.length; j++) {
+                    minutes[j] = m.getInt(j);
+                }
+                list.add(new Preset(name, minutes));
+            }
+        } catch (Exception e) {
+            // Corrupt JSON -> ignore custom presets.
+        }
+        return list;
+    }
+
+    /** Persist the full list of user-defined presets. */
+    public static void saveCustomPresets(Context context, List<Preset> presets) {
+        JSONArray arr = new JSONArray();
+        try {
+            for (Preset p : presets) {
+                JSONObject o = new JSONObject();
+                o.put("name", p.name);
+                JSONArray m = new JSONArray();
+                for (int v : p.minutes) {
+                    m.put(v);
+                }
+                o.put("minutes", m);
+                arr.put(o);
+            }
+        } catch (Exception e) {
+            return;
+        }
+        prefs(context).edit().putString(KEY_CUSTOM_PRESETS, arr.toString()).apply();
     }
 }

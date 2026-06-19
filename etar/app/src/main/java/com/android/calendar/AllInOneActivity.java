@@ -57,6 +57,8 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.accessibility.AccessibilityEvent;
+import android.content.DialogInterface;
+import android.widget.CheckBox;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.RelativeLayout.LayoutParams;
@@ -93,13 +95,19 @@ import com.google.android.material.datepicker.CalendarConstraints;
 import com.google.android.material.datepicker.MaterialDatePicker;
 import com.google.android.material.datepicker.MaterialPickerOnPositiveButtonClickListener;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.navigation.NavigationView;
+
+import com.android.calendar.CalendarEventModel.ReminderEntry;
+import com.android.calendar.event.EditEventActivity;
+import com.android.calendar.settings.HabitPrefs;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
@@ -534,10 +542,98 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
                 } else if (t.getMinute() > 0 && t.getMinute() < 30) {
                     t.setMinute(30);
                 }
-                mController.sendEventRelatedEvent(
-                        this, EventType.CREATE_EVENT, -1, t.toMillis(), 0, 0, 0, -1);
+                long begin = t.toMillis();
+                if (HabitPrefs.isEnabled(AllInOneActivity.this)) {
+                    showHabitNewEventChooser(begin);
+                } else {
+                    mController.sendEventRelatedEvent(
+                            this, EventType.CREATE_EVENT, -1, begin, 0, 0, 0, -1);
+                }
             }
         });
+    }
+
+    /**
+     * HABIT: intermediate "new event" step. Lets the user tick one or more
+     * reminder presets (multi-select) before opening the editor; the checked
+     * presets' reminders are combined and pre-filled.
+     */
+    private void showHabitNewEventChooser(final long beginMillis) {
+        final List<HabitPrefs.Preset> presets = HabitPrefs.getPresets(this);
+
+        LinearLayout container = new LinearLayout(this);
+        container.setOrientation(LinearLayout.VERTICAL);
+        int pad = (int) (20 * getResources().getDisplayMetrics().density);
+        container.setPadding(pad, pad / 2, pad, 0);
+
+        TextView hint = new TextView(this);
+        hint.setText(R.string.habit_chooser_hint);
+        container.addView(hint);
+
+        final ArrayList<CheckBox> boxes = new ArrayList<>();
+        for (HabitPrefs.Preset p : presets) {
+            CheckBox cb = new CheckBox(this);
+            cb.setText(p.name + "  (" + describeMinutes(p.minutes) + ")");
+            container.addView(cb);
+            boxes.add(cb);
+        }
+
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.habit_chooser_title)
+                .setView(container)
+                .setPositiveButton(R.string.habit_chooser_create,
+                        new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                LinkedHashSet<Integer> mins = new LinkedHashSet<>();
+                                for (int i = 0; i < boxes.size(); i++) {
+                                    if (boxes.get(i).isChecked()) {
+                                        for (int m : presets.get(i).minutes) {
+                                            mins.add(m);
+                                        }
+                                    }
+                                }
+                                launchHabitNewEvent(beginMillis, mins);
+                            }
+                        })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void launchHabitNewEvent(long beginMillis, LinkedHashSet<Integer> mins) {
+        Intent intent = new Intent(AllInOneActivity.this, EditEventActivity.class);
+        intent.putExtra(EXTRA_EVENT_BEGIN_TIME, beginMillis);
+        if (mins != null && !mins.isEmpty()) {
+            ArrayList<ReminderEntry> reminders = new ArrayList<>();
+            for (int m : mins) {
+                reminders.add(ReminderEntry.valueOf(m));
+            }
+            intent.putExtra(EditEventActivity.EXTRA_EVENT_REMINDERS, reminders);
+        }
+        startActivity(intent);
+    }
+
+    private String describeMinutes(int[] minutes) {
+        if (minutes == null || minutes.length == 0) {
+            return "no reminder";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < minutes.length; i++) {
+            if (i > 0) {
+                sb.append(", ");
+            }
+            int m = minutes[i];
+            if (m < 60) {
+                sb.append(m).append("m");
+            } else if (m < 1440) {
+                sb.append(m / 60).append("h");
+            } else if (m < 10080) {
+                sb.append(m / 1440).append("d");
+            } else {
+                sb.append(m / 10080).append("w");
+            }
+        }
+        return sb.toString();
     }
 
     private void showActionBar() {
