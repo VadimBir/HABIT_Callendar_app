@@ -56,10 +56,19 @@ Status legend: ✅ done & verified · 🟡 partial/in progress · ❌ not starte
 ## Timeline view (vertical continuous)
 - R82 ✅ Timeline pinch-zoom: two-finger pinch shrinks/grows the gap between
         hours (0.3x–4x), persisted across sessions.
-- R83 🟡 Per-view text-size submenu (Settings → HABIT → Text sizes): custom
-        size % for Timeline, Event card, Event editor — DONE. Day/Week/Month/
-        Agenda sizes (R83b, custom-drawn views) and font-FAMILY selection
-        (R83c, needs bundled fonts) still pending.
+- R83 🟡 Text-size screen (Settings → HABIT → Text sizes → real Activity with
+        % sliders, 50–200%). Base (all views) global multiplier + per-view
+        (Timeline, Event card, Event editor); effective = base × view. DONE.
+        Day/Week/Month/Agenda sizes (R83b) + font-FAMILY (R83c) still pending.
+- R84 ❌ Reminder "opacity trail": for an event with reminders, draw a trail of
+        the event colour leading up to it, opacity stepping UP at each reminder
+        time (uniform RGB, only alpha changes). N reminders ⇒ N bands between
+        ~10% and ~85% alpha, each band a small gradient, brightening as the
+        event nears. (Big; spec captured, not started.)
+- R85 🟡 Timeline deep zoom: min hour-scale lowered (~a week fits) + event
+        title auto-shrinks to fit short rows. Cluster-wide collision-based font
+        sizing / smarter horizontal compaction still TODO.
+- R86 ✅ Timeline has its own top app bar (title + back).
 - R80 ✅ New selectable "Timeline" view (now in the ☰ drawer next to
         Day/Week/Month/Agenda): vertical
         continuous scroll, top=past/bottom=future, days stacked, events as

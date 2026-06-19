@@ -47,6 +47,7 @@ public class HabitDayTimelineView extends View {
     private final Paint mEventTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint mNowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint mHeaderBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final float mEventTextBase;
 
     private long mDayStart;
     private String mLabel = "";
@@ -78,7 +79,7 @@ public class HabitDayTimelineView extends View {
         int onSurface = dark ? 0xFFE0E0E0 : 0xFF3C4043;
         int faint = dark ? 0x33FFFFFF : 0x22000000;
 
-        float ts = com.android.calendar.settings.HabitPrefs.getSizeScale(
+        float ts = com.android.calendar.settings.HabitPrefs.getEffectiveScale(
                 context, com.android.calendar.settings.HabitPrefs.KEY_SIZE_TIMELINE);
         mLinePaint.setColor(faint);
         mLinePaint.setStrokeWidth(Math.max(1f, density));
@@ -90,6 +91,7 @@ public class HabitDayTimelineView extends View {
         mHeaderBgPaint.setColor(dark ? 0x22FFFFFF : 0x0A000000);
         mEventTextPaint.setColor(Color.WHITE);
         mEventTextPaint.setTextSize(12 * density * ts);
+        mEventTextBase = 12 * density * ts;
         mNowPaint.setColor(0xFFEA4335);
         mNowPaint.setStrokeWidth(2 * density);
     }
@@ -274,10 +276,16 @@ public class HabitDayTimelineView extends View {
         RectF r = new RectF(left, top + 1, left + width - 2 * density, bottom - 1);
         mEventPaint.setColor(0xFF000000 | e.color);
         canvas.drawRoundRect(r, 4 * density, 4 * density, mEventPaint);
+        // Auto-shrink the title to fit short rows when zoomed out.
+        float fit = Math.min(mEventTextBase, r.height() * 0.78f);
+        fit = Math.max(5 * density, fit);
+        mEventTextPaint.setTextSize(fit);
         canvas.save();
         canvas.clipRect(r);
-        canvas.drawText(safe(e.title), r.left + 4 * density, r.top + 13 * density, mEventTextPaint);
+        canvas.drawText(safe(e.title), r.left + 4 * density,
+                r.top + fit + 1 * density, mEventTextPaint);
         canvas.restore();
+        mEventTextPaint.setTextSize(mEventTextBase);
         mCells.add(new Cell(new RectF(r), e));
     }
 

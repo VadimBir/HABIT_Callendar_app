@@ -58,11 +58,12 @@ public class HabitPrefs {
 
     // ----- Per-view text sizes -----
 
+    public static final String KEY_SIZE_BASE = "pref_habit_size_base";
     public static final String KEY_SIZE_TIMELINE = "pref_habit_size_timeline";
     public static final String KEY_SIZE_EVENT_CARD = "pref_habit_size_event_card";
     public static final String KEY_SIZE_EVENT_EDIT = "pref_habit_size_event_edit";
 
-    /** Text-size scale (1.0 = default), stored as a string percent value. */
+    /** Raw text-size scale for one key (1.0 = default). */
     public static float getSizeScale(Context context, String key) {
         String raw = prefs(context).getString(key, "1.0");
         try {
@@ -70,6 +71,15 @@ public class HabitPrefs {
         } catch (NumberFormatException e) {
             return 1f;
         }
+    }
+
+    public static void setSizeScale(Context context, String key, float value) {
+        prefs(context).edit().putString(key, String.valueOf(value)).apply();
+    }
+
+    /** Per-view scale compounded with the global base scale (base * view). */
+    public static float getEffectiveScale(Context context, String viewKey) {
+        return getSizeScale(context, KEY_SIZE_BASE) * getSizeScale(context, viewKey);
     }
 
     public static final String KEY_TIMELINE_HOUR_SCALE = "pref_habit_timeline_hour_scale";
@@ -87,7 +97,7 @@ public class HabitPrefs {
      * that screen scales, not the whole app.
      */
     public static Context wrapWithScale(Context base, String key) {
-        float scale = getSizeScale(base, key);
+        float scale = getEffectiveScale(base, key);
         if (scale == 1f) {
             return base;
         }

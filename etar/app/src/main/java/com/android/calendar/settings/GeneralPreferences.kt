@@ -133,6 +133,13 @@ class GeneralPreferences : PreferenceFragmentCompat(),
                     true
                 }
 
+        // HABIT: open the per-view text-size screen.
+        preferenceScreen.findPreference<Preference>("pref_habit_text_sizes")
+                ?.setOnPreferenceClickListener {
+                    startActivity(Intent(requireContext(), HabitTextSizesActivity::class.java))
+                    true
+                }
+
         val prefs = CalendarUtils.getSharedPreferences(requireActivity(),
                 Utils.SHARED_PREFS_NAME)
 

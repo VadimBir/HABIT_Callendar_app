@@ -18,7 +18,10 @@ import android.view.ScaleGestureDetector;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
+import android.widget.LinearLayout;
 import android.widget.ListView;
+
+import androidx.appcompat.widget.Toolbar;
 
 import com.android.calendar.CalendarController;
 import com.android.calendar.CalendarController.EventType;
@@ -73,7 +76,7 @@ public class HabitTimelineActivity extends Activity {
                 new ScaleGestureDetector.SimpleOnScaleGestureListener() {
                     @Override
                     public boolean onScale(ScaleGestureDetector d) {
-                        mHourScale = Math.max(0.3f, Math.min(4f, mHourScale * d.getScaleFactor()));
+                        mHourScale = Math.max(0.06f, Math.min(6f, mHourScale * d.getScaleFactor()));
                         applyHourScale(list);
                         return true;
                     }
@@ -109,7 +112,19 @@ public class HabitTimelineActivity extends Activity {
             }
         });
 
-        setContentView(list);
+        Toolbar bar = new Toolbar(this);
+        bar.setTitle("Timeline");
+        bar.setNavigationIcon(ws.xsoh.etar.R.drawable.ic_arrow_back);
+        bar.setNavigationOnClickListener(v -> finish());
+
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.addView(bar, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        root.addView(list, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+
+        setContentView(root);
         list.setSelection(START_OFFSET);   // start on today
     }
 

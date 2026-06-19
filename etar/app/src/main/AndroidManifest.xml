@@ -182,6 +182,12 @@
             android:exported="false"
             android:parentActivityName="com.android.calendar.AllInOneActivity" />
 
+        <activity
+            android:name="com.android.calendar.settings.HabitTextSizesActivity"
+            android:label="@string/habit_text_sizes_title"
+            android:exported="false"
+            android:parentActivityName="com.android.calendar.settings.SettingsActivity" />
+
         <!-- Declarations for search -->
         <!-- Make all activities a searchable context -->
         <meta-data android:name="android.app.default_searchable"
