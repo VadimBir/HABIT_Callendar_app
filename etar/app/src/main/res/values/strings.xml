@@ -49,6 +49,7 @@
     <string name="habit_save_as_template" translatable="false">Save as template</string>
     <string name="habit_template_saved" translatable="false">Saved as template</string>
     <string name="habit_template_removed" translatable="false">Removed from templates</string>
+    <string name="habit_template_need_title" translatable="false">Give the event a title before saving it as a template</string>
     <string name="habit_dynamic_default_title" translatable="false">New events dynamic by default</string>
     <string name="habit_dynamic_default_summary" translatable="false">Dynamic deadlines auto-roll +1 day if the event lapses undone, keeping the original as a reference.</string>
     <string name="habit_seamless_scroll_title" translatable="false">Seamless week scrolling</string>

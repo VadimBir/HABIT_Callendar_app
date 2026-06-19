@@ -1971,13 +1971,22 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
             item.setChecked(false);
             Toast.makeText(mContext, R.string.habit_template_removed, Toast.LENGTH_SHORT).show();
         } else {
+            if (title == null || title.trim().isEmpty()) {
+                // Templates are keyed by title; refuse anonymous ones.
+                item.setChecked(false);
+                Toast.makeText(mContext, R.string.habit_template_need_title,
+                        Toast.LENGTH_SHORT).show();
+                return;
+            }
             String desc = mEventCursor.getString(EVENT_INDEX_DESCRIPTION);
             String loc = mEventCursor.getString(EVENT_INDEX_EVENT_LOCATION);
             long durationMin = Math.max(0, (mEndMillis - mStartMillis) / 60000);
-            int n = mReminders == null ? 0 : mReminders.size();
+            // Reminders live in mOriginalReminders for a loaded event (mReminders is
+            // only populated on save/rotation), so read them from there.
+            int n = mOriginalReminders == null ? 0 : mOriginalReminders.size();
             int[] mins = new int[n];
             for (int i = 0; i < n; i++) {
-                mins[i] = mReminders.get(i).getMinutes();
+                mins[i] = mOriginalReminders.get(i).getMinutes();
             }
             HabitPrefs.addTemplate(mContext, new HabitPrefs.Template(
                     title, desc, loc, durationMin, mAllDay, mins));

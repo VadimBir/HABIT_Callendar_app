@@ -126,7 +126,21 @@ public class HabitEventChooser {
                                            HabitPrefs.Template t) {
         long begin = baseIntent.getLongExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME,
                 System.currentTimeMillis());
-        long end = begin + t.durationMinutes * 60000L;
+        long end;
+        if (t.allDay) {
+            // All-day events must start at local midnight and span whole days.
+            java.util.Calendar c = java.util.Calendar.getInstance();
+            c.setTimeInMillis(begin);
+            c.set(java.util.Calendar.HOUR_OF_DAY, 0);
+            c.set(java.util.Calendar.MINUTE, 0);
+            c.set(java.util.Calendar.SECOND, 0);
+            c.set(java.util.Calendar.MILLISECOND, 0);
+            begin = c.getTimeInMillis();
+            long days = Math.max(1, Math.round(t.durationMinutes / 1440.0));
+            end = begin + days * 86400000L;
+        } else {
+            end = begin + t.durationMinutes * 60000L;
+        }
 
         Intent intent = new Intent(activity, EditEventActivity.class);
         intent.putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, begin);
