@@ -60,8 +60,8 @@ public class EditEventActivity extends AbstractCalendarActivity {
     @Override
     protected void attachBaseContext(android.content.Context newBase) {
         // HABIT: apply the user's event-screen font scale to the editor only.
-        super.attachBaseContext(
-                com.android.calendar.settings.HabitPrefs.wrapWithScale(newBase));
+        super.attachBaseContext(com.android.calendar.settings.HabitPrefs.wrapWithScale(
+                newBase, com.android.calendar.settings.HabitPrefs.KEY_SIZE_EVENT_EDIT));
     }
 
     private int mEventColor;

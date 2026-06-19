@@ -78,16 +78,18 @@ public class HabitDayTimelineView extends View {
         int onSurface = dark ? 0xFFE0E0E0 : 0xFF3C4043;
         int faint = dark ? 0x33FFFFFF : 0x22000000;
 
+        float ts = com.android.calendar.settings.HabitPrefs.getSizeScale(
+                context, com.android.calendar.settings.HabitPrefs.KEY_SIZE_TIMELINE);
         mLinePaint.setColor(faint);
         mLinePaint.setStrokeWidth(Math.max(1f, density));
         mHourTextPaint.setColor(dark ? 0xFF9AA0A6 : 0xFF70757A);
-        mHourTextPaint.setTextSize(11 * density);
+        mHourTextPaint.setTextSize(11 * density * ts);
         mHeaderTextPaint.setColor(onSurface);
-        mHeaderTextPaint.setTextSize(13 * density);
+        mHeaderTextPaint.setTextSize(13 * density * ts);
         mHeaderTextPaint.setTypeface(Typeface.DEFAULT_BOLD);
         mHeaderBgPaint.setColor(dark ? 0x22FFFFFF : 0x0A000000);
         mEventTextPaint.setColor(Color.WHITE);
-        mEventTextPaint.setTextSize(12 * density);
+        mEventTextPaint.setTextSize(12 * density * ts);
         mNowPaint.setColor(0xFFEA4335);
         mNowPaint.setStrokeWidth(2 * density);
     }

@@ -56,13 +56,15 @@ public class HabitPrefs {
         return prefs(context).getBoolean(KEY_SEAMLESS_SCROLL, true);
     }
 
-    // ----- Event-screen text scale (preview + editor) -----
+    // ----- Per-view text sizes -----
 
-    public static final String KEY_EVENT_TEXT_SCALE = "pref_habit_event_text_scale";
+    public static final String KEY_SIZE_TIMELINE = "pref_habit_size_timeline";
+    public static final String KEY_SIZE_EVENT_CARD = "pref_habit_size_event_card";
+    public static final String KEY_SIZE_EVENT_EDIT = "pref_habit_size_event_edit";
 
-    /** Font scale for the event preview/edit screens (1.0 = default). */
-    public static float getEventTextScale(Context context) {
-        String raw = prefs(context).getString(KEY_EVENT_TEXT_SCALE, "1.0");
+    /** Text-size scale (1.0 = default), stored as a string percent value. */
+    public static float getSizeScale(Context context, String key) {
+        String raw = prefs(context).getString(key, "1.0");
         try {
             return Float.parseFloat(raw);
         } catch (NumberFormatException e) {
@@ -70,11 +72,6 @@ public class HabitPrefs {
         }
     }
 
-    /**
-     * Wrap a base context with the user's event-screen font scale. Used from
-     * attachBaseContext of the event preview and edit activities so only those
-     * screens shrink, not the whole calendar.
-     */
     public static final String KEY_TIMELINE_HOUR_SCALE = "pref_habit_timeline_hour_scale";
 
     public static float getTimelineHourScale(Context context) {
@@ -85,8 +82,12 @@ public class HabitPrefs {
         prefs(context).edit().putFloat(KEY_TIMELINE_HOUR_SCALE, scale).apply();
     }
 
-    public static Context wrapWithScale(Context base) {
-        float scale = getEventTextScale(base);
+    /**
+     * Wrap a base context with a per-view font scale (applies to sp text) so only
+     * that screen scales, not the whole app.
+     */
+    public static Context wrapWithScale(Context base, String key) {
+        float scale = getSizeScale(base, key);
         if (scale == 1f) {
             return base;
         }

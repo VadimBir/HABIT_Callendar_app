@@ -36,6 +36,11 @@
     <string name="habit_chooser_create" translatable="false">Create event</string>
     <string name="habit_text_scale_title" translatable="false">Event screen text size</string>
     <string name="habit_text_scale_summary" translatable="false">Shrinks text on the event preview and edit screens.</string>
+    <string name="habit_text_sizes_title" translatable="false">Text sizes</string>
+    <string name="habit_text_sizes_summary" translatable="false">Per-view text size</string>
+    <string name="habit_size_timeline" translatable="false">Timeline</string>
+    <string name="habit_size_event_card" translatable="false">Event card (preview)</string>
+    <string name="habit_size_event_edit" translatable="false">Event editor</string>
     <string name="habit_manage_presets_title" translatable="false">Manage reminder presets</string>
     <string name="habit_manage_presets_summary" translatable="false">Create any number of presets, each with any number of reminders.</string>
     <string name="habit_preset_add" translatable="false">Add preset</string>

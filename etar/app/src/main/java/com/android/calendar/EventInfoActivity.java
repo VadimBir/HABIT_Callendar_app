@@ -51,8 +51,8 @@ public class EventInfoActivity extends AppCompatActivity {
     @Override
     protected void attachBaseContext(android.content.Context newBase) {
         // HABIT: apply the user's event-screen font scale to the preview only.
-        super.attachBaseContext(
-                com.android.calendar.settings.HabitPrefs.wrapWithScale(newBase));
+        super.attachBaseContext(com.android.calendar.settings.HabitPrefs.wrapWithScale(
+                newBase, com.android.calendar.settings.HabitPrefs.KEY_SIZE_EVENT_CARD));
     }
     // Create an observer so that we can update the views whenever a
     // Calendar event changes.
