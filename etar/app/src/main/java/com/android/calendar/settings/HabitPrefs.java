@@ -9,6 +9,7 @@ package com.android.calendar.settings;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.res.Configuration;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -53,6 +54,35 @@ public class HabitPrefs {
 
     public static boolean isSeamlessScroll(Context context) {
         return prefs(context).getBoolean(KEY_SEAMLESS_SCROLL, true);
+    }
+
+    // ----- Event-screen text scale (preview + editor) -----
+
+    public static final String KEY_EVENT_TEXT_SCALE = "pref_habit_event_text_scale";
+
+    /** Font scale for the event preview/edit screens (1.0 = default). */
+    public static float getEventTextScale(Context context) {
+        String raw = prefs(context).getString(KEY_EVENT_TEXT_SCALE, "1.0");
+        try {
+            return Float.parseFloat(raw);
+        } catch (NumberFormatException e) {
+            return 1f;
+        }
+    }
+
+    /**
+     * Wrap a base context with the user's event-screen font scale. Used from
+     * attachBaseContext of the event preview and edit activities so only those
+     * screens shrink, not the whole calendar.
+     */
+    public static Context wrapWithScale(Context base) {
+        float scale = getEventTextScale(base);
+        if (scale == 1f) {
+            return base;
+        }
+        Configuration config = new Configuration(base.getResources().getConfiguration());
+        config.fontScale = config.fontScale * scale;
+        return base.createConfigurationContext(config);
     }
 
     /** Default reminder lead-time in minutes for the given cadence index. */

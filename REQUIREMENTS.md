@@ -62,3 +62,5 @@ Status legend: ✅ done & verified · 🟡 partial/in progress · ❌ not starte
         (dead pref — wiring comes with R40/R41).
 - R63 ❌ "Seamless week scrolling" toggle persists but is read nowhere (deferred
         with R50).
+- R64 ✅ "Event screen text size" setting scales the font on the event preview
+        and edit screens (100/90/80/75/67%) without affecting the calendar.

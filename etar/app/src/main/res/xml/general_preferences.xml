@@ -169,6 +169,14 @@
             app:key="pref_habit_manage_presets"
             app:title="@string/habit_manage_presets_title"
             app:summary="@string/habit_manage_presets_summary" />
+        <ListPreference
+            app:key="pref_habit_event_text_scale"
+            app:defaultValue="1.0"
+            app:title="@string/habit_text_scale_title"
+            app:summary="@string/habit_text_scale_summary"
+            app:entries="@array/habit_text_scale_labels"
+            app:entryValues="@array/habit_text_scale_values"
+            app:useSimpleSummaryProvider="true" />
         <SwitchPreference
             app:key="pref_habit_dynamic_default"
             app:defaultValue="false"

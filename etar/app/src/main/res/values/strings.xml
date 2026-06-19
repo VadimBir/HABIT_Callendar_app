@@ -34,6 +34,8 @@
     <string name="habit_chooser_title" translatable="false">New event</string>
     <string name="habit_chooser_hint" translatable="false">Tick reminder presets to pre-fill (you can still add more in the editor):</string>
     <string name="habit_chooser_create" translatable="false">Create event</string>
+    <string name="habit_text_scale_title" translatable="false">Event screen text size</string>
+    <string name="habit_text_scale_summary" translatable="false">Shrinks text on the event preview and edit screens.</string>
     <string name="habit_manage_presets_title" translatable="false">Manage reminder presets</string>
     <string name="habit_manage_presets_summary" translatable="false">Create any number of presets, each with any number of reminders.</string>
     <string name="habit_preset_add" translatable="false">Add preset</string>

@@ -47,6 +47,13 @@ public class EventInfoActivity extends AppCompatActivity {
 
     private static final String TAG = "EventInfoActivity";
     private EventInfoFragment mInfoFragment;
+
+    @Override
+    protected void attachBaseContext(android.content.Context newBase) {
+        // HABIT: apply the user's event-screen font scale to the preview only.
+        super.attachBaseContext(
+                com.android.calendar.settings.HabitPrefs.wrapWithScale(newBase));
+    }
     // Create an observer so that we can update the views whenever a
     // Calendar event changes.
     private final ContentObserver mObserver = new ContentObserver(new Handler()) {
