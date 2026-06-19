@@ -11,11 +11,11 @@ package com.android.calendar.habit;
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.SparseArray;
-import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
 import android.widget.BaseAdapter;
 import android.widget.ListView;
 
@@ -29,6 +29,8 @@ import com.android.calendar.settings.HabitPrefs;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.TimeZone;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class HabitTimelineActivity extends Activity {
@@ -40,6 +42,8 @@ public class HabitTimelineActivity extends Activity {
 
     private final Calendar mBase = Calendar.getInstance();
     private final SparseArray<ArrayList<Event>> mCache = new SparseArray<>();
+    private final ExecutorService mExec = Executors.newSingleThreadExecutor();
+    private final Handler mMain = new Handler(Looper.getMainLooper());
     private CalendarController mController;
     private float mLastX, mLastY;
 
@@ -56,6 +60,7 @@ public class HabitTimelineActivity extends Activity {
         mBase.set(Calendar.MILLISECOND, 0);
 
         final ListView list = new ListView(this);
+        list.setId(android.R.id.list);
         list.setDivider(null);
         list.setDividerHeight(0);
         list.setAdapter(new DayAdapter());
@@ -91,7 +96,18 @@ public class HabitTimelineActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        mCache.clear();   // refresh events after returning from create/edit
+        // Refresh after returning from create/edit; rows reload lazily off-thread.
+        mCache.clear();
+        ListView lv = (ListView) findViewById(android.R.id.list);
+        if (lv != null && lv.getAdapter() instanceof BaseAdapter) {
+            ((BaseAdapter) lv.getAdapter()).notifyDataSetChanged();
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        mExec.shutdownNow();
     }
 
     private long dayStartFor(int position) {
@@ -100,18 +116,24 @@ public class HabitTimelineActivity extends Activity {
         return c.getTimeInMillis();
     }
 
-    private ArrayList<Event> eventsFor(int position, long dayStart) {
-        ArrayList<Event> cached = mCache.get(position);
-        if (cached != null) return cached;
-        ArrayList<Event> evs = new ArrayList<>();
-        int gmtOff = (int) (TimeZone.getDefault().getOffset(dayStart) / 1000);
-        int jd = Time.getJulianDay(dayStart, gmtOff);
-        try {
-            Event.loadEvents(this, evs, jd, 1, 0, new AtomicInteger(0));
-        } catch (Exception ignored) {
-        }
-        mCache.put(position, evs);
-        return evs;
+    /** Load one day's events off the UI thread, then bind if the row still shows it. */
+    private void loadInto(final HabitDayTimelineView view, final int position, final long dayStart) {
+        mExec.execute(() -> {
+            final ArrayList<Event> evs = new ArrayList<>();
+            try {
+                int gmtOff = (int) (TimeZone.getDefault().getOffset(dayStart) / 1000);
+                int jd = Time.getJulianDay(dayStart, gmtOff);
+                Event.loadEvents(HabitTimelineActivity.this, evs, jd, 1, 0, new AtomicInteger(0));
+            } catch (Exception ignored) {
+            }
+            mMain.post(() -> {
+                mCache.put(position, evs);
+                Object tag = view.getTag();
+                if (tag instanceof Integer && (Integer) tag == position) {
+                    view.setDay(dayStart, evs);
+                }
+            });
+        });
     }
 
     private class DayAdapter extends BaseAdapter {
@@ -125,7 +147,14 @@ public class HabitTimelineActivity extends Activity {
                     ? (HabitDayTimelineView) convertView
                     : new HabitDayTimelineView(HabitTimelineActivity.this);
             long dayStart = dayStartFor(position);
-            v.setDay(dayStart, eventsFor(position, dayStart));
+            v.setTag(position);
+            ArrayList<Event> cached = mCache.get(position);
+            if (cached != null) {
+                v.setDay(dayStart, cached);
+            } else {
+                v.setDay(dayStart, null);     // bind empty now, load off-thread
+                loadInto(v, position, dayStart);
+            }
             return v;
         }
     }

@@ -50,6 +50,7 @@ public class HabitDayTimelineView extends View {
     private long mDayStart;
     private String mLabel = "";
     private boolean mIsToday;
+    private int mAllDayCount;
     private final List<Event> mEvents = new ArrayList<>();
 
     private static class Cell {
@@ -98,12 +99,24 @@ public class HabitDayTimelineView extends View {
         if (events != null) {
             mEvents.addAll(events);
         }
+        mAllDayCount = 0;
+        for (Event e : mEvents) {
+            if (e.allDay) mAllDayCount++;
+        }
         requestLayout();
         invalidate();
     }
 
+    private float allDayBandH() {
+        return mAllDayCount > 0 ? mAllDayCount * (minEventH * 1.5f) + pad : 0;
+    }
+
+    private float gridTop() {
+        return headerH + allDayBandH();
+    }
+
     private int totalHeight() {
-        return (int) (headerH + 24 * hourH);
+        return (int) (gridTop() + 24 * hourH);
     }
 
     @Override
@@ -124,7 +137,7 @@ public class HabitDayTimelineView extends View {
 
     /** Returns the wall-clock millis corresponding to vertical position y. */
     public long timeAt(float y) {
-        float rel = y - headerH;
+        float rel = y - gridTop();
         if (rel < 0) rel = 0;
         long ms = (long) (rel / hourH * HOUR_MS);
         if (ms < 0) ms = 0;
@@ -139,6 +152,7 @@ public class HabitDayTimelineView extends View {
     protected void onDraw(Canvas canvas) {
         mCells.clear();
         float w = getWidth();
+        float gridTop = gridTop();
 
         // Header
         canvas.drawRect(0, 0, w, headerH, mHeaderBgPaint);
@@ -147,7 +161,7 @@ public class HabitDayTimelineView extends View {
 
         // Hour grid + labels
         for (int h = 0; h <= 24; h++) {
-            float y = headerH + h * hourH;
+            float y = gridTop + h * hourH;
             canvas.drawLine(gutterW, y, w, y, mLinePaint);
             if (h < 24) {
                 canvas.drawText(String.format(Locale.US, "%02d:00", h),
@@ -220,6 +234,13 @@ public class HabitDayTimelineView extends View {
             mCells.add(new Cell(new RectF(r), e));
             ay += minEventH * 1.5f;
         }
+
+        // Now-line (once, only on today; works even with no events)
+        if (mIsToday) {
+            long now = System.currentTimeMillis();
+            float ny = gridTop + (now - mDayStart) / (float) HOUR_MS * hourH;
+            canvas.drawLine(gutterW, ny, w, ny, mNowPaint);
+        }
     }
 
     private long clampEnd(Event e, long dayEnd) {
@@ -233,8 +254,9 @@ public class HabitDayTimelineView extends View {
         long s = Math.max(e.startMillis, mDayStart);
         long en = Math.min(e.endMillis, dayEnd);
         if (en <= s) en = s + HOUR_MS / 4;
-        float top = headerH + (s - mDayStart) / (float) HOUR_MS * hourH;
-        float bottom = headerH + (en - mDayStart) / (float) HOUR_MS * hourH;
+        float gt = gridTop();
+        float top = gt + (s - mDayStart) / (float) HOUR_MS * hourH;
+        float bottom = gt + (en - mDayStart) / (float) HOUR_MS * hourH;
         if (bottom - top < minEventH) bottom = top + minEventH;
         RectF r = new RectF(left, top + 1, left + width - 2 * density, bottom - 1);
         mEventPaint.setColor(0xFF000000 | e.color);
@@ -244,12 +266,6 @@ public class HabitDayTimelineView extends View {
         canvas.drawText(safe(e.title), r.left + 4 * density, r.top + 13 * density, mEventTextPaint);
         canvas.restore();
         mCells.add(new Cell(new RectF(r), e));
-
-        if (mIsToday) {
-            long now = System.currentTimeMillis();
-            float ny = headerH + (now - mDayStart) / (float) HOUR_MS * hourH;
-            canvas.drawLine(gutterW, ny, getWidth(), ny, mNowPaint);
-        }
     }
 
     private String safe(CharSequence s) { return s == null ? "(no title)" : s.toString(); }
