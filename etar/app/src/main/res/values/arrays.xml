@@ -14,18 +14,47 @@
      limitations under the License.
 -->
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- HABIT reminder cadence -->
+    <!-- HABIT reminder cadence (per-event selector) -->
     <string-array name="habit_cadence_labels" translatable="false">
-        <item>Off</item>
+        <item>Standard</item>
         <item>D2D (day to day)</item>
         <item>W2W (week to week)</item>
         <item>M2M (month to month)</item>
     </string-array>
     <string-array name="habit_cadence_values" translatable="false">
-        <item>OFF</item>
+        <item>STD</item>
         <item>D2D</item>
         <item>W2W</item>
         <item>M2M</item>
+    </string-array>
+    <!-- HABIT default reminder lead-time options (settings) -->
+    <string-array name="habit_minute_labels" translatable="false">
+        <item>At time of event</item>
+        <item>10 minutes before</item>
+        <item>30 minutes before</item>
+        <item>1 hour before</item>
+        <item>3 hours before</item>
+        <item>12 hours before</item>
+        <item>1 day before</item>
+        <item>2 days before</item>
+        <item>3 days before</item>
+        <item>1 week before</item>
+        <item>2 weeks before</item>
+        <item>30 days before</item>
+    </string-array>
+    <string-array name="habit_minute_values" translatable="false">
+        <item>0</item>
+        <item>10</item>
+        <item>30</item>
+        <item>60</item>
+        <item>180</item>
+        <item>720</item>
+        <item>1440</item>
+        <item>2880</item>
+        <item>4320</item>
+        <item>10080</item>
+        <item>20160</item>
+        <item>43200</item>
     </string-array>
     <string-array name="pref_theme_entries" translatable="false" tools:ignore="InconsistentArrays">
         <item>@string/preferences_light_theme</item>

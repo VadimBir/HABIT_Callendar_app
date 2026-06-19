@@ -166,12 +166,32 @@
             app:title="@string/habit_enabled_title"
             app:summary="@string/habit_enabled_summary" />
         <ListPreference
-            app:key="pref_habit_cadence"
-            app:defaultValue="OFF"
-            app:title="@string/habit_cadence_title"
-            app:dialogTitle="@string/habit_cadence_dialog"
-            app:entries="@array/habit_cadence_labels"
-            app:entryValues="@array/habit_cadence_values"
+            app:key="pref_habit_cadence_std"
+            app:defaultValue="10"
+            app:title="@string/habit_cadence_std_title"
+            app:entries="@array/habit_minute_labels"
+            app:entryValues="@array/habit_minute_values"
+            app:useSimpleSummaryProvider="true" />
+        <ListPreference
+            app:key="pref_habit_cadence_d2d"
+            app:defaultValue="1440"
+            app:title="@string/habit_cadence_d2d_title"
+            app:entries="@array/habit_minute_labels"
+            app:entryValues="@array/habit_minute_values"
+            app:useSimpleSummaryProvider="true" />
+        <ListPreference
+            app:key="pref_habit_cadence_w2w"
+            app:defaultValue="10080"
+            app:title="@string/habit_cadence_w2w_title"
+            app:entries="@array/habit_minute_labels"
+            app:entryValues="@array/habit_minute_values"
+            app:useSimpleSummaryProvider="true" />
+        <ListPreference
+            app:key="pref_habit_cadence_m2m"
+            app:defaultValue="43200"
+            app:title="@string/habit_cadence_m2m_title"
+            app:entries="@array/habit_minute_labels"
+            app:entryValues="@array/habit_minute_values"
             app:useSimpleSummaryProvider="true" />
         <SwitchPreference
             app:key="pref_habit_dynamic_default"

@@ -25,6 +25,12 @@
     <string name="habit_enabled_summary" translatable="false">Master switch for the custom HABIT behaviours below.</string>
     <string name="habit_cadence_title" translatable="false">Reminder cadence</string>
     <string name="habit_cadence_dialog" translatable="false">Default reminder cadence</string>
+    <string name="habit_event_cadence_prompt" translatable="false">Reminder preset</string>
+    <string name="habit_defaults_title" translatable="false">Default reminder per preset</string>
+    <string name="habit_cadence_std_title" translatable="false">Standard default reminder</string>
+    <string name="habit_cadence_d2d_title" translatable="false">D2D default reminder</string>
+    <string name="habit_cadence_w2w_title" translatable="false">W2W default reminder</string>
+    <string name="habit_cadence_m2m_title" translatable="false">M2M default reminder</string>
     <string name="habit_dynamic_default_title" translatable="false">New events dynamic by default</string>
     <string name="habit_dynamic_default_summary" translatable="false">Dynamic deadlines auto-roll +1 day if the event lapses undone, keeping the original as a reference.</string>
     <string name="habit_seamless_scroll_title" translatable="false">Seamless week scrolling</string>
