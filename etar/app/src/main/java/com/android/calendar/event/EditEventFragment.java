@@ -252,6 +252,11 @@ public class EditEventFragment extends Fragment implements EventHandler, OnColor
 
         if (mReminders != null) {
             mModel.mReminders = mReminders;
+            // Reminders supplied via intent (e.g. HABIT preset chooser) must flip
+            // mHasAlarm on, otherwise EditEventView skips building the reminder rows.
+            if (!mReminders.isEmpty()) {
+                mModel.mHasAlarm = true;
+            }
         }
 
         if (mEventColorInitialized) {
