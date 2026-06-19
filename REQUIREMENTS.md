@@ -49,10 +49,16 @@ Status legend: ✅ done & verified · 🟡 partial/in progress · ❌ not starte
 - R41 ❌ Background worker performs the rolling (WorkManager).
 - R42 🟡 Setting: "new events dynamic by default" (toggle exists; behaviour TBD).
 
+## Month view
+- R70 ✅ Tapping an event in the month view opens THAT event (preview), instead
+        of selecting the whole day. Falls back to day-open when tapping empty space.
+
 ## Scrolling
 - R50 ⏸️ Seamless horizontal week sliding (free drag/fling across many weeks,
         stop on any day, weekday header scrolls with content). DEFERRED — it is a
         full rewrite of Etar's 5,000-line week view; revisit after the above.
+- R51 ⏸️ Day view left-right infinite/continuous scroll — same DayView/ViewSwitcher
+        rewrite as R50; deferred for the same reason.
 
 ## Settings (HABIT features category)
 - R60 ✅ Master "Enable HABIT features" switch.

@@ -157,6 +157,29 @@ public class MonthWeekEventsView extends SimpleWeekView {
     HashMap<Integer, Utils.DNAStrand> mDna = null;
     private int mClickedDayIndex = -1;
     private int mClickedDayColor;
+    // HABIT: per-event hit rectangles recorded during draw, so taps on an event
+    // open that event instead of the whole day.
+    private final java.util.ArrayList<EventCell> mEventCells = new java.util.ArrayList<>();
+
+    private static class EventCell {
+        final android.graphics.RectF rect;
+        final Event event;
+        EventCell(android.graphics.RectF rect, Event event) {
+            this.rect = rect;
+            this.event = event;
+        }
+    }
+
+    /** Returns the event drawn at (x,y) within this week row, or null. */
+    public Event getEventAtLocation(float x, float y) {
+        for (int i = mEventCells.size() - 1; i >= 0; i--) {
+            EventCell c = mEventCells.get(i);
+            if (c.rect.contains(x, y)) {
+                return c.event;
+            }
+        }
+        return null;
+    }
     private boolean mAnimateToday;
     private int mAnimateTodayAlpha = 0;
     private ObjectAnimator mTodayAnimator = null;
@@ -699,6 +722,7 @@ public class MonthWeekEventsView extends SimpleWeekView {
     }
 
     protected void drawEvents(Canvas canvas) {
+        mEventCells.clear();
         if (mEvents == null || mEvents.isEmpty()) {
             return;
         }
@@ -1694,6 +1718,15 @@ public class MonthWeekEventsView extends SimpleWeekView {
         @Override
         public void draw(Canvas canvas, ViewDetailsPreferences.Preferences preferences, int day) {
            if (mFormat.isVisible() && mEvent != null) {
+               // HABIT: record this event's tappable rectangle before drawing it.
+               int span = Math.max(1, mFormat.getTotalSpan());
+               int lines = Math.max(1, mFormat.getEventLines());
+               float top = mBoundaries.getY();
+               float left = computeDayLeftPosition(day);
+               float right = computeDayLeftPosition(day + span);
+               float bottom = top + lines * mEventHeight + mEventLinePadding;
+               mEventCells.add(new EventCell(
+                       new android.graphics.RectF(left, top, right, bottom), mEvent));
                drawEventRectangle(canvas, day);
                mBoundaries.moveToFirstLine();
                drawText(canvas, preferences, day);

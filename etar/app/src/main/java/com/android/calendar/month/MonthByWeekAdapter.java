@@ -69,6 +69,7 @@ public class MonthByWeekAdapter extends SimpleWeeksAdapter {
     MonthWeekEventsView mSingleTapUpView;
     MonthWeekEventsView mLongClickedView;
     float mClickedXLocation;                // Used to find which day was clicked
+    float mClickedYLocation;                // Used to find which event was clicked
     // Perform the tap animation in a runnable to allow a delay before showing the tap color.
     // This is done to prevent a click animation when a fling is done.
     private final Runnable mDoClick = new Runnable() {
@@ -92,6 +93,17 @@ public class MonthByWeekAdapter extends SimpleWeeksAdapter {
         @Override
         public void run() {
             if (mSingleTapUpView != null) {
+                // HABIT: if the tap landed on an event, open that event instead of the day.
+                Event tappedEvent =
+                        mSingleTapUpView.getEventAtLocation(mClickedXLocation, mClickedYLocation);
+                if (tappedEvent != null) {
+                    mController.sendEventRelatedEvent(this, EventType.VIEW_EVENT, tappedEvent.id,
+                            tappedEvent.startMillis, tappedEvent.endMillis,
+                            (int) mClickedXLocation, (int) mClickedYLocation, -1);
+                    clearClickedView(mSingleTapUpView);
+                    mSingleTapUpView = null;
+                    return;
+                }
                 Time day = mSingleTapUpView.getDayFromLocation(mClickedXLocation);
                 if (Log.isLoggable(TAG, Log.DEBUG)) {
                     Log.d(TAG, "Touched day at Row=" + mSingleTapUpView.mWeek + " day=" + day.toString());
@@ -379,6 +391,7 @@ public class MonthByWeekAdapter extends SimpleWeeksAdapter {
                 case MotionEvent.ACTION_DOWN:
                     mClickedView = (MonthWeekEventsView) v;
                     mClickedXLocation = event.getX();
+                    mClickedYLocation = event.getY();
                     mClickTime = System.currentTimeMillis();
                     mListView.postDelayed(mDoClick, mOnDownDelay);
                     break;
