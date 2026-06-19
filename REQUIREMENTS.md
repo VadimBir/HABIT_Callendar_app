@@ -54,7 +54,14 @@ Status legend: ✅ done & verified · 🟡 partial/in progress · ❌ not starte
         of selecting the whole day. Falls back to day-open when tapping empty space.
 
 ## Timeline view (vertical continuous)
-- R80 ✅ New selectable "Timeline" view (overflow menu → Timeline): vertical
+- R82 ✅ Timeline pinch-zoom: two-finger pinch shrinks/grows the gap between
+        hours (0.3x–4x), persisted across sessions.
+- R83 ❌ Per-view FONT submenu: choose font family + size per place (timeline,
+        day, week, month, agenda, event quick card, event edit). Custom sizes
+        beyond the preset percentages. (Big; not started — font-family needs
+        bundled fonts + applying to custom-drawn views.)
+- R80 ✅ New selectable "Timeline" view (now in the ☰ drawer next to
+        Day/Week/Month/Agenda): vertical
         continuous scroll, top=past/bottom=future, days stacked, events as
         horizontal chunks; tap event opens it, tap empty time creates an event
         (via the chooser). Iteration 1 (basic overlap columns, all-day strip,

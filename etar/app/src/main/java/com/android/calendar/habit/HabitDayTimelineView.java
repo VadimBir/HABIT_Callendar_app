@@ -34,7 +34,8 @@ public class HabitDayTimelineView extends View {
 
     private final float density;
     private final float headerH;
-    private final float hourH;
+    private final float hourBase;
+    private float hourH;
     private final float gutterW;
     private final float minEventH;
     private final float pad;
@@ -65,7 +66,8 @@ public class HabitDayTimelineView extends View {
         super(context);
         density = getResources().getDisplayMetrics().density;
         headerH = 26 * density;
-        hourH = 56 * density;
+        hourBase = 56 * density;
+        hourH = hourBase;
         gutterW = 42 * density;
         minEventH = 16 * density;
         pad = 3 * density;
@@ -103,6 +105,15 @@ public class HabitDayTimelineView extends View {
         for (Event e : mEvents) {
             if (e.allDay) mAllDayCount++;
         }
+        requestLayout();
+        invalidate();
+    }
+
+    /** Pinch-zoom: scale the hour spacing (1.0 = default). */
+    public void setHourScale(float scale) {
+        float h = hourBase * scale;
+        if (Math.abs(h - hourH) < 0.5f) return;
+        hourH = h;
         requestLayout();
         invalidate();
     }

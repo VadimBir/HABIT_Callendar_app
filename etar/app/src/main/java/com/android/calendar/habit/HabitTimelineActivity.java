@@ -14,6 +14,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.SparseArray;
+import android.view.ScaleGestureDetector;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
@@ -46,6 +47,7 @@ public class HabitTimelineActivity extends Activity {
     private final Handler mMain = new Handler(Looper.getMainLooper());
     private CalendarController mController;
     private float mLastX, mLastY;
+    private float mHourScale = 1f;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,16 +61,34 @@ public class HabitTimelineActivity extends Activity {
         mBase.set(Calendar.SECOND, 0);
         mBase.set(Calendar.MILLISECOND, 0);
 
+        mHourScale = HabitPrefs.getTimelineHourScale(this);
+
         final ListView list = new ListView(this);
         list.setId(android.R.id.list);
         list.setDivider(null);
         list.setDividerHeight(0);
         list.setAdapter(new DayAdapter());
 
+        final ScaleGestureDetector scale = new ScaleGestureDetector(this,
+                new ScaleGestureDetector.SimpleOnScaleGestureListener() {
+                    @Override
+                    public boolean onScale(ScaleGestureDetector d) {
+                        mHourScale = Math.max(0.3f, Math.min(4f, mHourScale * d.getScaleFactor()));
+                        applyHourScale(list);
+                        return true;
+                    }
+
+                    @Override
+                    public void onScaleEnd(ScaleGestureDetector d) {
+                        HabitPrefs.setTimelineHourScale(HabitTimelineActivity.this, mHourScale);
+                    }
+                });
+
         list.setOnTouchListener((v, ev) -> {
+            scale.onTouchEvent(ev);
             mLastX = ev.getX();
             mLastY = ev.getY();
-            return false;
+            return scale.isInProgress();   // consume during pinch; otherwise let the list scroll
         });
         list.setOnItemClickListener((parent, view, position, id) -> {
             if (!(view instanceof HabitDayTimelineView)) return;
@@ -110,6 +130,15 @@ public class HabitTimelineActivity extends Activity {
         mExec.shutdownNow();
     }
 
+    private void applyHourScale(ListView list) {
+        for (int i = 0; i < list.getChildCount(); i++) {
+            View c = list.getChildAt(i);
+            if (c instanceof HabitDayTimelineView) {
+                ((HabitDayTimelineView) c).setHourScale(mHourScale);
+            }
+        }
+    }
+
     private long dayStartFor(int position) {
         Calendar c = (Calendar) mBase.clone();
         c.add(Calendar.DAY_OF_YEAR, position - START_OFFSET);
@@ -148,6 +177,7 @@ public class HabitTimelineActivity extends Activity {
                     : new HabitDayTimelineView(HabitTimelineActivity.this);
             long dayStart = dayStartFor(position);
             v.setTag(position);
+            v.setHourScale(mHourScale);
             ArrayList<Event> cached = mCache.get(position);
             if (cached != null) {
                 v.setDay(dayStart, cached);

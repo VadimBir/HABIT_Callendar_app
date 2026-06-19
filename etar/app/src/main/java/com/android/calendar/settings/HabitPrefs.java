@@ -75,6 +75,16 @@ public class HabitPrefs {
      * attachBaseContext of the event preview and edit activities so only those
      * screens shrink, not the whole calendar.
      */
+    public static final String KEY_TIMELINE_HOUR_SCALE = "pref_habit_timeline_hour_scale";
+
+    public static float getTimelineHourScale(Context context) {
+        return prefs(context).getFloat(KEY_TIMELINE_HOUR_SCALE, 1f);
+    }
+
+    public static void setTimelineHourScale(Context context, float scale) {
+        prefs(context).edit().putFloat(KEY_TIMELINE_HOUR_SCALE, scale).apply();
+    }
+
     public static Context wrapWithScale(Context base) {
         float scale = getEventTextScale(base);
         if (scale == 1f) {
