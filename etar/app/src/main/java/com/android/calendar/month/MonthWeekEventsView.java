@@ -1719,7 +1719,9 @@ public class MonthWeekEventsView extends SimpleWeekView {
         public void draw(Canvas canvas, ViewDetailsPreferences.Preferences preferences, int day) {
            if (mFormat.isVisible() && mEvent != null) {
                // HABIT: record this event's tappable rectangle before drawing it.
-               int span = Math.max(1, mFormat.getTotalSpan());
+               // Use the per-day span (same as the drawn rectangle) so the hit area
+               // matches the chip and never runs past the week's right edge.
+               int span = Math.max(1, mFormat.getDaySpan(day));
                int lines = Math.max(1, mFormat.getEventLines());
                float top = mBoundaries.getY();
                float left = computeDayLeftPosition(day);
