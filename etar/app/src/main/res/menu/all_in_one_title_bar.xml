@@ -64,4 +64,9 @@
         android:title="@string/view_settings"
         android:orderInCategory="8"
         app:showAsAction="never" />
+    <item
+        android:id="@+id/action_timeline"
+        android:title="@string/habit_timeline_title"
+        android:orderInCategory="6"
+        app:showAsAction="never" />
 </menu>

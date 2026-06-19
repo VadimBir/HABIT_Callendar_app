@@ -176,6 +176,12 @@
             android:exported="false"
             android:parentActivityName="com.android.calendar.settings.SettingsActivity" />
 
+        <activity
+            android:name="com.android.calendar.habit.HabitTimelineActivity"
+            android:label="@string/habit_timeline_title"
+            android:exported="false"
+            android:parentActivityName="com.android.calendar.AllInOneActivity" />
+
         <!-- Declarations for search -->
         <!-- Make all activities a searchable context -->
         <meta-data android:name="android.app.default_searchable"

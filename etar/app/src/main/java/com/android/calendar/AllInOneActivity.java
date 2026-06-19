@@ -942,6 +942,8 @@ public class AllInOneActivity extends AbstractCalendarActivity implements EventH
             startActivity(intent);
         } else if (itemId == R.id.action_info) {
             checkAndRequestDisablingDoze();
+        } else if (itemId == R.id.action_timeline) {
+            startActivity(new Intent(this, com.android.calendar.habit.HabitTimelineActivity.class));
         } else {
                 return mExtensions.handleItemSelected(item, this);
         }

@@ -53,6 +53,15 @@ Status legend: ✅ done & verified · 🟡 partial/in progress · ❌ not starte
 - R70 ✅ Tapping an event in the month view opens THAT event (preview), instead
         of selecting the whole day. Falls back to day-open when tapping empty space.
 
+## Timeline view (vertical continuous)
+- R80 ✅ New selectable "Timeline" view (overflow menu → Timeline): vertical
+        continuous scroll, top=past/bottom=future, days stacked, events as
+        horizontal chunks; tap event opens it, tap empty time creates an event
+        (via the chooser). Iteration 1 (basic overlap columns, all-day strip,
+        now-line). Existing day/week/month views untouched.
+  - R81 ⏸️ Refine: smoother loading (async/prefetch), better overlap layout,
+          true infinite extension beyond the ~2yr window, pinch hour-zoom.
+
 ## Scrolling
 - R50 ⏸️ Seamless horizontal week sliding (free drag/fling across many weeks,
         stop on any day, weekday header scrolls with content). DEFERRED — it is a

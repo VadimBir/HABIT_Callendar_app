@@ -19,8 +19,8 @@ android {
 	defaultConfig {
 		minSdk = 23
 		targetSdk = 36
-		versionCode = 1063
-		versionName = "habit-1.1.1"
+		versionCode = 1064
+		versionName = "habit-1.2.0"
 		applicationId = "ws.xsoh.etar"
 		testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 	}
