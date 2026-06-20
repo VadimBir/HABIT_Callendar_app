@@ -60,11 +60,12 @@ Status legend: ✅ done & verified · 🟡 partial/in progress · ❌ not starte
         % sliders, 50–200%). Base (all views) global multiplier + per-view
         (Timeline, Event card, Event editor); effective = base × view. DONE.
         Day/Week/Month/Agenda sizes (R83b) + font-FAMILY (R83c) still pending.
-- R84 ❌ Reminder "opacity trail": for an event with reminders, draw a trail of
-        the event colour leading up to it, opacity stepping UP at each reminder
-        time (uniform RGB, only alpha changes). N reminders ⇒ N bands between
-        ~10% and ~85% alpha, each band a small gradient, brightening as the
-        event nears. (Big; spec captured, not started.)
+- R84 🟡 Reminder "opacity trail": DONE (v1) — each timed event with reminders
+        shows a trail in its own column above it, event-colour RGB uniform, alpha
+        stepping up at each reminder (N bands, LOW 10%→HIGH 85%, small gap/jump
+        per reminder, brightening toward the event). Reminders loaded per day in
+        background. Limitation: only the same-day portion of a trail is drawn
+        (multi-day-ahead reminders don't paint earlier days yet).
 - R85 🟡 Timeline deep zoom: min hour-scale lowered (~a week fits) + event
         title auto-shrinks to fit short rows. Cluster-wide collision-based font
         sizing / smarter horizontal compaction still TODO.

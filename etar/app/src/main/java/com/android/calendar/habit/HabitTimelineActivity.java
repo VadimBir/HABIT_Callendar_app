@@ -10,7 +10,9 @@ package com.android.calendar.habit;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.database.Cursor;
 import android.os.Bundle;
+import android.provider.CalendarContract;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.SparseArray;
@@ -32,6 +34,8 @@ import com.android.calendar.settings.HabitPrefs;
 
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -46,6 +50,7 @@ public class HabitTimelineActivity extends Activity {
 
     private final Calendar mBase = Calendar.getInstance();
     private final SparseArray<ArrayList<Event>> mCache = new SparseArray<>();
+    private final SparseArray<Map<Long, int[]>> mReminderCache = new SparseArray<>();
     private final ExecutorService mExec = Executors.newSingleThreadExecutor();
     private final Handler mMain = new Handler(Looper.getMainLooper());
     private CalendarController mController;
@@ -133,6 +138,7 @@ public class HabitTimelineActivity extends Activity {
         super.onResume();
         // Refresh after returning from create/edit; rows reload lazily off-thread.
         mCache.clear();
+        mReminderCache.clear();
         ListView lv = (ListView) findViewById(android.R.id.list);
         if (lv != null && lv.getAdapter() instanceof BaseAdapter) {
             ((BaseAdapter) lv.getAdapter()).notifyDataSetChanged();
@@ -170,14 +176,62 @@ public class HabitTimelineActivity extends Activity {
                 Event.loadEvents(HabitTimelineActivity.this, evs, jd, 1, 0, new AtomicInteger(0));
             } catch (Exception ignored) {
             }
+            final Map<Long, int[]> rem = loadReminders(evs);
             mMain.post(() -> {
                 mCache.put(position, evs);
+                mReminderCache.put(position, rem);
                 Object tag = view.getTag();
                 if (tag instanceof Integer && (Integer) tag == position) {
-                    view.setDay(dayStart, evs);
+                    view.setDay(dayStart, evs, rem);
                 }
             });
         });
+    }
+
+    /** Query reminders for the given events; map event id -> minutes-before, desc. */
+    private Map<Long, int[]> loadReminders(ArrayList<Event> events) {
+        HashMap<Long, int[]> out = new HashMap<>();
+        if (events.isEmpty()) return out;
+        StringBuilder ids = new StringBuilder();
+        java.util.HashSet<Long> seen = new java.util.HashSet<>();
+        for (Event e : events) {
+            if (e.allDay || !seen.add(e.id)) continue;
+            if (ids.length() > 0) ids.append(',');
+            ids.append(e.id);
+        }
+        if (ids.length() == 0) return out;
+        HashMap<Long, java.util.TreeSet<Integer>> tmp = new HashMap<>();
+        Cursor c = null;
+        try {
+            c = getContentResolver().query(CalendarContract.Reminders.CONTENT_URI,
+                    new String[]{CalendarContract.Reminders.EVENT_ID, CalendarContract.Reminders.MINUTES},
+                    CalendarContract.Reminders.EVENT_ID + " IN (" + ids + ")", null, null);
+            if (c != null) {
+                while (c.moveToNext()) {
+                    long id = c.getLong(0);
+                    int min = c.getInt(1);
+                    if (min < 0) min = 10;        // default-reminder sentinel
+                    if (min <= 0) continue;
+                    java.util.TreeSet<Integer> set = tmp.get(id);
+                    if (set == null) {
+                        set = new java.util.TreeSet<>();
+                        tmp.put(id, set);
+                    }
+                    set.add(min);
+                }
+            }
+        } catch (Exception ignored) {
+        } finally {
+            if (c != null) c.close();
+        }
+        for (Map.Entry<Long, java.util.TreeSet<Integer>> en : tmp.entrySet()) {
+            // descending: earliest (largest minutes) first
+            int[] arr = new int[en.getValue().size()];
+            int k = arr.length - 1;
+            for (int m : en.getValue()) arr[k--] = m;
+            out.put(en.getKey(), arr);
+        }
+        return out;
     }
 
     private class DayAdapter extends BaseAdapter {
@@ -195,9 +249,9 @@ public class HabitTimelineActivity extends Activity {
             v.setHourScale(mHourScale);
             ArrayList<Event> cached = mCache.get(position);
             if (cached != null) {
-                v.setDay(dayStart, cached);
+                v.setDay(dayStart, cached, mReminderCache.get(position));
             } else {
-                v.setDay(dayStart, null);     // bind empty now, load off-thread
+                v.setDay(dayStart, null, null);     // bind empty now, load off-thread
                 loadInto(v, position, dayStart);
             }
             return v;

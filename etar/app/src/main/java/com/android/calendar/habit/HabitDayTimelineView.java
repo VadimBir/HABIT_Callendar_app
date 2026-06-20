@@ -12,8 +12,10 @@ package com.android.calendar.habit;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.RectF;
+import android.graphics.Shader;
 import android.graphics.Typeface;
 import android.view.View;
 
@@ -26,6 +28,7 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class HabitDayTimelineView extends View {
 
@@ -47,6 +50,7 @@ public class HabitDayTimelineView extends View {
     private final Paint mEventTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint mNowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint mHeaderBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint mTrailPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final float mEventTextBase;
 
     private long mDayStart;
@@ -54,6 +58,15 @@ public class HabitDayTimelineView extends View {
     private boolean mIsToday;
     private int mAllDayCount;
     private final List<Event> mEvents = new ArrayList<>();
+    /** event id -> reminder minutes-before-start, sorted descending. */
+    private Map<Long, int[]> mReminders;
+
+    private static class Placed {
+        final Event e;
+        final float left;
+        final float width;
+        Placed(Event e, float left, float width) { this.e = e; this.left = left; this.width = width; }
+    }
 
     private static class Cell {
         final RectF rect;
@@ -96,8 +109,9 @@ public class HabitDayTimelineView extends View {
         mNowPaint.setStrokeWidth(2 * density);
     }
 
-    public void setDay(long dayStartMillis, List<Event> events) {
+    public void setDay(long dayStartMillis, List<Event> events, Map<Long, int[]> reminders) {
         mDayStart = dayStartMillis;
+        mReminders = reminders;
         mLabel = mFmt.format(new Date(dayStartMillis));
         long now = System.currentTimeMillis();
         mIsToday = now >= dayStartMillis && now < dayStartMillis + DAY_MS;
@@ -202,6 +216,7 @@ public class HabitDayTimelineView extends View {
         float availW = availRight - availLeft;
         long dayEnd = mDayStart + DAY_MS;
 
+        List<Placed> placed = new ArrayList<>();
         int i = 0;
         while (i < timed.size()) {
             // build a cluster of mutually-overlapping events
@@ -231,10 +246,18 @@ public class HabitDayTimelineView extends View {
             int cols = Math.max(1, colEnd.size());
             float colW = availW / cols;
             for (int k = 0; k < cluster.size(); k++) {
-                drawEvent(canvas, cluster.get(k), dayEnd,
-                        availLeft + colOf[k] * colW, colW);
+                placed.add(new Placed(cluster.get(k), availLeft + colOf[k] * colW, colW));
             }
             i = j;
+        }
+
+        // Pass 1: reminder trails (behind the event boxes).
+        for (Placed p : placed) {
+            drawTrail(canvas, p);
+        }
+        // Pass 2: event boxes on top.
+        for (Placed p : placed) {
+            drawEvent(canvas, p.e, dayEnd, p.left, p.width);
         }
 
         // All-day events as chips under the header
@@ -263,6 +286,51 @@ public class HabitDayTimelineView extends View {
         long start = Math.max(e.startMillis, mDayStart);
         if (end < start + HOUR_MS / 4) end = start + HOUR_MS / 4; // ensure visible
         return end;
+    }
+
+    /**
+     * Opacity trail leading up to a reminder-bearing event, drawn in the event's
+     * own column above it. The event colour's RGB stays uniform; only alpha
+     * changes — stepping UP at each reminder time and brightening toward the
+     * event. N reminders => N bands between LOW and HIGH alpha, each a small
+     * gradient with a visible jump at every reminder boundary.
+     */
+    private void drawTrail(Canvas canvas, Placed p) {
+        if (mReminders == null) return;
+        int[] mins = mReminders.get(p.e.id);
+        if (mins == null || mins.length == 0) return;
+
+        final float LOW = 0.10f, HIGH = 0.85f;
+        final float range = HIGH - LOW;
+        final int n = mins.length;                 // sorted descending (earliest first)
+        final float band = range / n;
+        final float gap = Math.min(0.05f, band * 0.4f);
+        final float gt = gridTop();
+        final long start = p.e.startMillis;
+        final float rightInset = 2 * density;
+
+        for (int s = 0; s < n; s++) {
+            long bTop = start - (long) mins[s] * 60000L;                 // farther (earlier)
+            long bBot = (s + 1 < n) ? start - (long) mins[s + 1] * 60000L : start; // nearer
+            long ct = Math.max(bTop, mDayStart);
+            long cb = Math.min(bBot, mDayStart + DAY_MS);
+            if (cb <= ct) continue;                                      // outside this day
+
+            float yTop = gt + (ct - mDayStart) / (float) HOUR_MS * hourH;
+            float yBot = gt + (cb - mDayStart) / (float) HOUR_MS * hourH;
+            float aTop = LOW + band * s;
+            float aBot = aTop + band - gap;
+            int cTop = colorAlpha(p.e.color, aTop);
+            int cBot = colorAlpha(p.e.color, aBot);
+            mTrailPaint.setShader(new LinearGradient(0, yTop, 0, yBot, cTop, cBot, Shader.TileMode.CLAMP));
+            canvas.drawRect(p.left, yTop, p.left + p.width - rightInset, yBot, mTrailPaint);
+        }
+        mTrailPaint.setShader(null);
+    }
+
+    private static int colorAlpha(int rgb, float alpha) {
+        int a = Math.max(0, Math.min(255, Math.round(alpha * 255)));
+        return (a << 24) | (rgb & 0x00FFFFFF);
     }
 
     private void drawEvent(Canvas canvas, Event e, long dayEnd, float left, float width) {
