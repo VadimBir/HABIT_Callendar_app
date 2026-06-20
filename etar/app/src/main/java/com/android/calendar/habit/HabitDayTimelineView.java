@@ -318,7 +318,9 @@ public class HabitDayTimelineView extends View {
         float minH = 30 * density;
         if (botY - topY < minH) topY = botY - minH;
         float spanT = (float) (lastT - firstT);
-        float right = p.left + p.width - 2 * density;
+        // Full day-column width so the trail is unmistakable (behind event boxes).
+        float left = gutterW + 1 * density;
+        float right = getWidth() - 2 * density;
 
         // Each reminder band shifts hue (nearest = event colour) AND opacity.
         Color.colorToHSV(0xFF000000 | p.e.color, mTrailHsv);
@@ -347,7 +349,7 @@ public class HabitDayTimelineView extends View {
                 float yb = yTop + (yBot - yTop) * (q + 1) / steps;
                 float a = aTop + (aBot - aTop) * (q + 0.5f) / steps;
                 mTrailPaint.setColor(colorAlpha(bandRgb, a));
-                canvas.drawRect(p.left, ya, right, yb, mTrailPaint);
+                canvas.drawRect(left, ya, right, yb, mTrailPaint);
             }
         }
     }
