@@ -314,6 +314,12 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
 
     private ArrayList<Event> mEvents = new ArrayList<Event>();
     private ArrayList<Event> mAllDayEvents = new ArrayList<Event>();
+    // HABIT: reminder trails on the day/week grid.
+    private java.util.Map<Long, int[]> mHabitReminders;
+    private final android.graphics.Paint mHabitTrailPaint =
+            new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+    private final float[] mHabitHsv = new float[3];
+    private final float[] mHabitHsvBand = new float[3];
     private StaticLayout[] mLayouts = null;
     private StaticLayout[] mAllDayLayouts = null;
     private int mSelectionDay;        // Julian day
@@ -2041,6 +2047,7 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
                 boolean fadeinEvents = mFirstJulianDay != mLoadedFirstJulianDay;
                 mEvents = events;
                 mLoadedFirstJulianDay = mFirstJulianDay;
+                loadHabitReminders(events);
                 if (mAllDayEvents == null) {
                     mAllDayEvents = new ArrayList<Event>();
                 } else {
@@ -2086,6 +2093,26 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
                 }
             }
         }, mCancelCallback);
+    }
+
+    // HABIT: load reminders for the visible events off the main thread, then redraw.
+    private void loadHabitReminders(final ArrayList<Event> events) {
+        mHabitReminders = null;
+        final Context ctx = getContext();
+        new Thread(new Runnable() {
+            public void run() {
+                final java.util.Map<Long, int[]> rem =
+                        com.android.calendar.habit.HabitTrail.loadReminders(ctx, events);
+                post(new Runnable() {
+                    public void run() {
+                        if (mEvents == events) {     // still the current set
+                            mHabitReminders = rem;
+                            invalidate();
+                        }
+                    }
+                });
+            }
+        }).start();
     }
 
     public void setEventsAlpha(int alpha) {
@@ -3140,6 +3167,23 @@ public class DayView extends View implements View.OnCreateContextMenuListener,
 
         int alpha = eventTextPaint.getAlpha();
         eventTextPaint.setAlpha(mEventsAlpha);
+
+        // HABIT: reminder trails behind the event boxes.
+        if (mHabitReminders != null) {
+            float pxPerMin = (mCellHeight + HOUR_GAP) / 60f;
+            float density = getResources().getDisplayMetrics().density;
+            for (int i = 0; i < numEvents; i++) {
+                Event event = events.get(i);
+                if (event.drawAsAllday()) continue;
+                int[] mins = mHabitReminders.get(event.id);
+                if (mins == null) continue;
+                if (!geometry.computeEventRect(date, left, top, cellWidth, event)) continue;
+                com.android.calendar.habit.HabitTrail.draw(canvas, mHabitTrailPaint,
+                        mHabitHsv, mHabitHsvBand, event.color, mins,
+                        event.top, top, pxPerMin, left, left + cellWidth, density);
+            }
+        }
+
         for (int i = 0; i < numEvents; i++) {
             Event event = events.get(i);
             if (!geometry.computeEventRect(date, left, top, cellWidth, event)) {

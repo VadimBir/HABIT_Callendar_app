@@ -64,7 +64,11 @@ Status legend: ✅ done & verified · 🟡 partial/in progress · ❌ not starte
         pending.
 - R87 ✅ New HABIT activities (Timeline, Text sizes, Presets) pad below the
         status bar (were drawn under it).
-- R84 🟡 Reminder "opacity trail": DONE (v1) — each timed event with reminders
+- R84 🟡 Reminder trail now on Timeline AND Day/Week (DayView), via shared
+        com.android.calendar.habit.HabitTrail (reminder load + band draw); each
+        band steps colour (hue rotates per reminder) AND opacity. Month/Agenda
+        indicators still pending (no time axis). Original note below:
+- R84n 🟡 each timed event with reminders
         shows a trail in its own column above it, event-colour RGB uniform, alpha
         stepping up at each reminder (N bands, LOW 10%→HIGH 85%, small gap/jump
         per reminder, brightening toward the event). Reminders loaded per day in

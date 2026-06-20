@@ -216,48 +216,7 @@ public class HabitTimelineActivity extends Activity {
 
     /** Query reminders for the given events; map event id -> minutes-before, desc. */
     private Map<Long, int[]> loadReminders(ArrayList<Event> events) {
-        HashMap<Long, int[]> out = new HashMap<>();
-        if (events.isEmpty()) return out;
-        StringBuilder ids = new StringBuilder();
-        java.util.HashSet<Long> seen = new java.util.HashSet<>();
-        for (Event e : events) {
-            if (e.allDay || !seen.add(e.id)) continue;
-            if (ids.length() > 0) ids.append(',');
-            ids.append(e.id);
-        }
-        if (ids.length() == 0) return out;
-        HashMap<Long, java.util.TreeSet<Integer>> tmp = new HashMap<>();
-        Cursor c = null;
-        try {
-            c = getContentResolver().query(CalendarContract.Reminders.CONTENT_URI,
-                    new String[]{CalendarContract.Reminders.EVENT_ID, CalendarContract.Reminders.MINUTES},
-                    CalendarContract.Reminders.EVENT_ID + " IN (" + ids + ")", null, null);
-            if (c != null) {
-                while (c.moveToNext()) {
-                    long id = c.getLong(0);
-                    int min = c.getInt(1);
-                    if (min < 0) min = 10;        // default-reminder sentinel
-                    if (min <= 0) continue;
-                    java.util.TreeSet<Integer> set = tmp.get(id);
-                    if (set == null) {
-                        set = new java.util.TreeSet<>();
-                        tmp.put(id, set);
-                    }
-                    set.add(min);
-                }
-            }
-        } catch (Exception ignored) {
-        } finally {
-            if (c != null) c.close();
-        }
-        for (Map.Entry<Long, java.util.TreeSet<Integer>> en : tmp.entrySet()) {
-            // descending: earliest (largest minutes) first
-            int[] arr = new int[en.getValue().size()];
-            int k = arr.length - 1;
-            for (int m : en.getValue()) arr[k--] = m;
-            out.put(en.getKey(), arr);
-        }
-        return out;
+        return HabitTrail.loadReminders(this, events);
     }
 
     private class DayAdapter extends BaseAdapter {

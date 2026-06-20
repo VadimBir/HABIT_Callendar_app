@@ -299,59 +299,10 @@ public class HabitDayTimelineView extends View {
         if (mReminders == null) return;
         int[] mins = mReminders.get(p.e.id);
         if (mins == null || mins.length == 0) return;
-
-        final float LOW = 0.20f, HIGH = 0.90f;
-        final float range = HIGH - LOW;
-        final int n = mins.length;                 // sorted descending (earliest first)
-        final float band = range / n;
-        final float gap = Math.min(0.05f, band * 0.4f);
-        final float gt = gridTop();
-        final long start = p.e.startMillis;
-
-        // Visible trail span (clamped to this day), with a minimum height so even
-        // a short (e.g. 10-min) reminder produces a noticeable band.
-        long firstT = Math.max(start - (long) mins[0] * 60000L, mDayStart);
-        long lastT = Math.min(start, mDayStart + DAY_MS);
-        if (lastT <= firstT) return;
-        float topY = gt + (firstT - mDayStart) / (float) HOUR_MS * hourH;
-        float botY = gt + (lastT - mDayStart) / (float) HOUR_MS * hourH;
-        float minH = 30 * density;
-        if (botY - topY < minH) topY = botY - minH;
-        float spanT = (float) (lastT - firstT);
-        // Full day-column width so the trail is unmistakable (behind event boxes).
-        float left = gutterW + 1 * density;
-        float right = getWidth() - 2 * density;
-
-        // Each reminder band shifts hue (nearest = event colour) AND opacity.
-        Color.colorToHSV(0xFF000000 | p.e.color, mTrailHsv);
-
-        for (int s = 0; s < n; s++) {
-            long bt = Math.max(start - (long) mins[s] * 60000L, firstT);
-            long bb = (s + 1 < n) ? Math.min(start - (long) mins[s + 1] * 60000L, lastT) : lastT;
-            if (bb <= bt) continue;
-
-            float h0 = mTrailHsv[0] - (n - 1 - s) * 32f;
-            h0 %= 360f;
-            if (h0 < 0) h0 += 360f;
-            mTrailHsvBand[0] = h0;
-            mTrailHsvBand[1] = mTrailHsv[1];
-            mTrailHsvBand[2] = mTrailHsv[2];
-            int bandRgb = Color.HSVToColor(mTrailHsvBand) & 0x00FFFFFF;
-
-            float yTop = topY + (bt - firstT) / spanT * (botY - topY);
-            float yBot = topY + (bb - firstT) / spanT * (botY - topY);
-            float aTop = LOW + band * s;
-            float aBot = aTop + band - gap;
-            // Flat sub-steps approximate the within-band gradient (no per-frame alloc).
-            final int steps = 8;
-            for (int q = 0; q < steps; q++) {
-                float ya = yTop + (yBot - yTop) * q / steps;
-                float yb = yTop + (yBot - yTop) * (q + 1) / steps;
-                float a = aTop + (aBot - aTop) * (q + 0.5f) / steps;
-                mTrailPaint.setColor(colorAlpha(bandRgb, a));
-                canvas.drawRect(left, ya, right, yb, mTrailPaint);
-            }
-        }
+        float gt = gridTop();
+        float eventTopY = gt + (p.e.startMillis - mDayStart) / (float) HOUR_MS * hourH;
+        HabitTrail.draw(canvas, mTrailPaint, mTrailHsv, mTrailHsvBand, p.e.color, mins,
+                eventTopY, gt, hourH / 60f, gutterW + 1 * density, getWidth() - 2 * density, density);
     }
 
     private static int colorAlpha(int rgb, float alpha) {
