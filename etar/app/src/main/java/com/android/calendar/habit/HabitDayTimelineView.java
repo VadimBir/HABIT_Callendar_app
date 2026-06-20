@@ -49,6 +49,8 @@ public class HabitDayTimelineView extends View {
     private final Paint mNowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint mHeaderBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint mTrailPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final float[] mTrailHsv = new float[3];
+    private final float[] mTrailHsvBand = new float[3];
     private final float mEventTextBase;
 
     private long mDayStart;
@@ -307,12 +309,26 @@ public class HabitDayTimelineView extends View {
         final long start = p.e.startMillis;
         final float rightInset = 2 * density;
 
+        // Each reminder band also shifts hue: the nearest band keeps the event's
+        // colour; farther reminders rotate the hue so every step changes colour
+        // AND opacity.
+        Color.colorToHSV(0xFF000000 | p.e.color, mTrailHsv);
+
         for (int s = 0; s < n; s++) {
             long bTop = start - (long) mins[s] * 60000L;                 // farther (earlier)
             long bBot = (s + 1 < n) ? start - (long) mins[s + 1] * 60000L : start; // nearer
             long ct = Math.max(bTop, mDayStart);
             long cb = Math.min(bBot, mDayStart + DAY_MS);
             if (cb <= ct) continue;                                      // outside this day
+
+            // Per-band colour: hue rotated by distance from the event.
+            float h0 = mTrailHsv[0] - (n - 1 - s) * 32f;
+            h0 %= 360f;
+            if (h0 < 0) h0 += 360f;
+            mTrailHsvBand[0] = h0;
+            mTrailHsvBand[1] = mTrailHsv[1];
+            mTrailHsvBand[2] = mTrailHsv[2];
+            int bandRgb = Color.HSVToColor(mTrailHsvBand) & 0x00FFFFFF;
 
             float yTop = gt + (ct - mDayStart) / (float) HOUR_MS * hourH;
             float yBot = gt + (cb - mDayStart) / (float) HOUR_MS * hourH;
@@ -326,7 +342,7 @@ public class HabitDayTimelineView extends View {
                 float ya = yTop + (yBot - yTop) * q / steps;
                 float yb = yTop + (yBot - yTop) * (q + 1) / steps;
                 float a = aTop + (aBot - aTop) * (q + 0.5f) / steps;
-                mTrailPaint.setColor(colorAlpha(p.e.color, a));
+                mTrailPaint.setColor(colorAlpha(bandRgb, a));
                 canvas.drawRect(p.left, ya, right, yb, mTrailPaint);
             }
         }
