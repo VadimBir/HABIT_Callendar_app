@@ -56,14 +56,21 @@ public class HabitPrefs {
         return prefs(context).getBoolean(KEY_SEAMLESS_SCROLL, true);
     }
 
-    // ----- Per-view text sizes -----
+    // ----- Per-view sizes: a UI scale (scales layout AND text) plus a pure
+    //       TEXT scale applied on top, relative to the UI scale. Each has a
+    //       global "base" that all views compound with. -----
 
-    public static final String KEY_SIZE_BASE = "pref_habit_size_base";
-    public static final String KEY_SIZE_TIMELINE = "pref_habit_size_timeline";
-    public static final String KEY_SIZE_EVENT_CARD = "pref_habit_size_event_card";
-    public static final String KEY_SIZE_EVENT_EDIT = "pref_habit_size_event_edit";
+    public static final String KEY_UI_BASE = "pref_habit_ui_base";
+    public static final String KEY_UI_TIMELINE = "pref_habit_ui_timeline";
+    public static final String KEY_UI_EVENT_CARD = "pref_habit_ui_event_card";
+    public static final String KEY_UI_EVENT_EDIT = "pref_habit_ui_event_edit";
 
-    /** Raw text-size scale for one key (1.0 = default). */
+    public static final String KEY_TEXT_BASE = "pref_habit_text_base";
+    public static final String KEY_TEXT_TIMELINE = "pref_habit_text_timeline";
+    public static final String KEY_TEXT_EVENT_CARD = "pref_habit_text_event_card";
+    public static final String KEY_TEXT_EVENT_EDIT = "pref_habit_text_event_edit";
+
+    /** Raw scale for one key (1.0 = default), stored as a string percent value. */
     public static float getSizeScale(Context context, String key) {
         String raw = prefs(context).getString(key, "1.0");
         try {
@@ -77,9 +84,14 @@ public class HabitPrefs {
         prefs(context).edit().putString(key, String.valueOf(value)).apply();
     }
 
-    /** Per-view scale compounded with the global base scale (base * view). */
-    public static float getEffectiveScale(Context context, String viewKey) {
-        return getSizeScale(context, KEY_SIZE_BASE) * getSizeScale(context, viewKey);
+    /** UI scale (layout + text) = base × view. */
+    public static float getUiScale(Context context, String uiViewKey) {
+        return getSizeScale(context, KEY_UI_BASE) * getSizeScale(context, uiViewKey);
+    }
+
+    /** Pure text multiplier, applied on top of (relative to) the UI scale. */
+    public static float getTextScale(Context context, String textViewKey) {
+        return getSizeScale(context, KEY_TEXT_BASE) * getSizeScale(context, textViewKey);
     }
 
     public static final String KEY_TIMELINE_HOUR_SCALE = "pref_habit_timeline_hour_scale";
@@ -93,16 +105,30 @@ public class HabitPrefs {
     }
 
     /**
-     * Wrap a base context with a per-view font scale (applies to sp text) so only
-     * that screen scales, not the whole app.
+     * Wrap a base context so a single screen scales: UI scale changes density
+     * (layout + text grow together); the pure text scale additionally changes
+     * fontScale (text only), so final text = uiScale × textScale, UI = uiScale.
      */
-    public static Context wrapWithScale(Context base, String key) {
-        float scale = getEffectiveScale(base, key);
-        if (scale == 1f) {
+    public static Context wrapWithScale(Context base, String uiViewKey, String textViewKey) {
+        float ui = getUiScale(base, uiViewKey);
+        float text = getTextScale(base, textViewKey);
+        if (ui == 1f && text == 1f) {
             return base;
         }
         Configuration config = new Configuration(base.getResources().getConfiguration());
-        config.fontScale = config.fontScale * scale;
+        config.densityDpi = Math.max(1, Math.round(config.densityDpi * ui));
+        config.fontScale = config.fontScale * text;
+        return base.createConfigurationContext(config);
+    }
+
+    /** Wrap a base context changing only density (UI + text together). */
+    public static Context wrapWithUi(Context base, String uiViewKey) {
+        float ui = getUiScale(base, uiViewKey);
+        if (ui == 1f) {
+            return base;
+        }
+        Configuration config = new Configuration(base.getResources().getConfiguration());
+        config.densityDpi = Math.max(1, Math.round(config.densityDpi * ui));
         return base.createConfigurationContext(config);
     }
 

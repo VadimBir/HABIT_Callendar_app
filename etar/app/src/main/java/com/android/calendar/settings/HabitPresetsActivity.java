@@ -43,6 +43,10 @@ public class HabitPresetsActivity extends Activity {
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
+        int statusBar = 0;
+        int sbId = getResources().getIdentifier("status_bar_height", "dimen", "android");
+        if (sbId > 0) statusBar = getResources().getDimensionPixelSize(sbId);
+        root.setPadding(0, statusBar, 0, 0);
 
         ScrollView scroll = new ScrollView(this);
         scroll.setLayoutParams(new LinearLayout.LayoutParams(

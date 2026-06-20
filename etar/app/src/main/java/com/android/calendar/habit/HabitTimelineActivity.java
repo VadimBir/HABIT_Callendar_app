@@ -58,6 +58,13 @@ public class HabitTimelineActivity extends Activity {
     private float mHourScale = 1f;
 
     @Override
+    protected void attachBaseContext(android.content.Context newBase) {
+        // UI scale (density) so the whole timeline layout + dp sizing scales.
+        super.attachBaseContext(com.android.calendar.settings.HabitPrefs.wrapWithUi(
+                newBase, com.android.calendar.settings.HabitPrefs.KEY_UI_TIMELINE));
+    }
+
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setTitle("Timeline");
@@ -121,6 +128,10 @@ public class HabitTimelineActivity extends Activity {
         bar.setTitle("Timeline");
         bar.setNavigationIcon(ws.xsoh.etar.R.drawable.ic_arrow_back);
         bar.setNavigationOnClickListener(v -> finish());
+        int statusBar = 0;
+        int sbId = getResources().getIdentifier("status_bar_height", "dimen", "android");
+        if (sbId > 0) statusBar = getResources().getDimensionPixelSize(sbId);
+        bar.setPadding(bar.getPaddingLeft(), statusBar, bar.getPaddingRight(), bar.getPaddingBottom());
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);

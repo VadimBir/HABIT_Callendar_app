@@ -56,10 +56,14 @@ Status legend: ✅ done & verified · 🟡 partial/in progress · ❌ not starte
 ## Timeline view (vertical continuous)
 - R82 ✅ Timeline pinch-zoom: two-finger pinch shrinks/grows the gap between
         hours (0.3x–4x), persisted across sessions.
-- R83 🟡 Text-size screen (Settings → HABIT → Text sizes → real Activity with
-        % sliders, 50–200%). Base (all views) global multiplier + per-view
-        (Timeline, Event card, Event editor); effective = base × view. DONE.
-        Day/Week/Month/Agenda sizes (R83b) + font-FAMILY (R83c) still pending.
+- R83 🟡 Size screen (Settings → HABIT → Text sizes): TWO controls per target —
+        UI (scales layout+text via density) and Text (pure text, relative, via
+        fontScale) — each with a global Base that compounds. Targets: Timeline,
+        Event card, Event editor. final text = uiBase·uiView·textBase·textView;
+        UI = uiBase·uiView. Day/Week/Month/Agenda (R83b) + font-FAMILY (R83c)
+        pending.
+- R87 ✅ New HABIT activities (Timeline, Text sizes, Presets) pad below the
+        status bar (were drawn under it).
 - R84 🟡 Reminder "opacity trail": DONE (v1) — each timed event with reminders
         shows a trail in its own column above it, event-colour RGB uniform, alpha
         stepping up at each reminder (N bands, LOW 10%→HIGH 85%, small gap/jump

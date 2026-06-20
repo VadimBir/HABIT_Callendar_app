@@ -90,8 +90,8 @@ public class HabitDayTimelineView extends View {
         int onSurface = dark ? 0xFFE0E0E0 : 0xFF3C4043;
         int faint = dark ? 0x33FFFFFF : 0x22000000;
 
-        float ts = com.android.calendar.settings.HabitPrefs.getEffectiveScale(
-                context, com.android.calendar.settings.HabitPrefs.KEY_SIZE_TIMELINE);
+        float ts = com.android.calendar.settings.HabitPrefs.getTextScale(
+                context, com.android.calendar.settings.HabitPrefs.KEY_TEXT_TIMELINE);
         mLinePaint.setColor(faint);
         mLinePaint.setStrokeWidth(Math.max(1f, density));
         mHourTextPaint.setColor(dark ? 0xFF9AA0A6 : 0xFF70757A);
