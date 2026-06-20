@@ -300,28 +300,34 @@ public class HabitDayTimelineView extends View {
         int[] mins = mReminders.get(p.e.id);
         if (mins == null || mins.length == 0) return;
 
-        final float LOW = 0.10f, HIGH = 0.85f;
+        final float LOW = 0.20f, HIGH = 0.90f;
         final float range = HIGH - LOW;
         final int n = mins.length;                 // sorted descending (earliest first)
         final float band = range / n;
         final float gap = Math.min(0.05f, band * 0.4f);
         final float gt = gridTop();
         final long start = p.e.startMillis;
-        final float rightInset = 2 * density;
 
-        // Each reminder band also shifts hue: the nearest band keeps the event's
-        // colour; farther reminders rotate the hue so every step changes colour
-        // AND opacity.
+        // Visible trail span (clamped to this day), with a minimum height so even
+        // a short (e.g. 10-min) reminder produces a noticeable band.
+        long firstT = Math.max(start - (long) mins[0] * 60000L, mDayStart);
+        long lastT = Math.min(start, mDayStart + DAY_MS);
+        if (lastT <= firstT) return;
+        float topY = gt + (firstT - mDayStart) / (float) HOUR_MS * hourH;
+        float botY = gt + (lastT - mDayStart) / (float) HOUR_MS * hourH;
+        float minH = 30 * density;
+        if (botY - topY < minH) topY = botY - minH;
+        float spanT = (float) (lastT - firstT);
+        float right = p.left + p.width - 2 * density;
+
+        // Each reminder band shifts hue (nearest = event colour) AND opacity.
         Color.colorToHSV(0xFF000000 | p.e.color, mTrailHsv);
 
         for (int s = 0; s < n; s++) {
-            long bTop = start - (long) mins[s] * 60000L;                 // farther (earlier)
-            long bBot = (s + 1 < n) ? start - (long) mins[s + 1] * 60000L : start; // nearer
-            long ct = Math.max(bTop, mDayStart);
-            long cb = Math.min(bBot, mDayStart + DAY_MS);
-            if (cb <= ct) continue;                                      // outside this day
+            long bt = Math.max(start - (long) mins[s] * 60000L, firstT);
+            long bb = (s + 1 < n) ? Math.min(start - (long) mins[s + 1] * 60000L, lastT) : lastT;
+            if (bb <= bt) continue;
 
-            // Per-band colour: hue rotated by distance from the event.
             float h0 = mTrailHsv[0] - (n - 1 - s) * 32f;
             h0 %= 360f;
             if (h0 < 0) h0 += 360f;
@@ -330,14 +336,12 @@ public class HabitDayTimelineView extends View {
             mTrailHsvBand[2] = mTrailHsv[2];
             int bandRgb = Color.HSVToColor(mTrailHsvBand) & 0x00FFFFFF;
 
-            float yTop = gt + (ct - mDayStart) / (float) HOUR_MS * hourH;
-            float yBot = gt + (cb - mDayStart) / (float) HOUR_MS * hourH;
+            float yTop = topY + (bt - firstT) / spanT * (botY - topY);
+            float yBot = topY + (bb - firstT) / spanT * (botY - topY);
             float aTop = LOW + band * s;
             float aBot = aTop + band - gap;
-            // Approximate the within-band gradient with a few flat steps so we
-            // never allocate a LinearGradient/Shader per frame (pinch/scroll).
+            // Flat sub-steps approximate the within-band gradient (no per-frame alloc).
             final int steps = 8;
-            float right = p.left + p.width - rightInset;
             for (int q = 0; q < steps; q++) {
                 float ya = yTop + (yBot - yTop) * q / steps;
                 float yb = yTop + (yBot - yTop) * (q + 1) / steps;
