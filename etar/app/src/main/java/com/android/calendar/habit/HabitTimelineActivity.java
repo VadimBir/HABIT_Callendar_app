@@ -180,12 +180,27 @@ public class HabitTimelineActivity extends Activity {
             mMain.post(() -> {
                 mCache.put(position, evs);
                 mReminderCache.put(position, rem);
+                trimCaches(position);
                 Object tag = view.getTag();
                 if (tag instanceof Integer && (Integer) tag == position) {
                     view.setDay(dayStart, evs, rem);
                 }
             });
         });
+    }
+
+    /** Keep caches bounded to a window around the current scroll position. */
+    private void trimCaches(int center) {
+        removeFar(mCache, center);
+        removeFar(mReminderCache, center);
+    }
+
+    private static <T> void removeFar(SparseArray<T> a, int center) {
+        for (int i = a.size() - 1; i >= 0; i--) {
+            if (Math.abs(a.keyAt(i) - center) > 120) {
+                a.removeAt(i);
+            }
+        }
     }
 
     /** Query reminders for the given events; map event id -> minutes-before, desc. */

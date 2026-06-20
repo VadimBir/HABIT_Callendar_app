@@ -12,10 +12,8 @@ package com.android.calendar.habit;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.RectF;
-import android.graphics.Shader;
 import android.graphics.Typeface;
 import android.view.View;
 
@@ -320,12 +318,18 @@ public class HabitDayTimelineView extends View {
             float yBot = gt + (cb - mDayStart) / (float) HOUR_MS * hourH;
             float aTop = LOW + band * s;
             float aBot = aTop + band - gap;
-            int cTop = colorAlpha(p.e.color, aTop);
-            int cBot = colorAlpha(p.e.color, aBot);
-            mTrailPaint.setShader(new LinearGradient(0, yTop, 0, yBot, cTop, cBot, Shader.TileMode.CLAMP));
-            canvas.drawRect(p.left, yTop, p.left + p.width - rightInset, yBot, mTrailPaint);
+            // Approximate the within-band gradient with a few flat steps so we
+            // never allocate a LinearGradient/Shader per frame (pinch/scroll).
+            final int steps = 8;
+            float right = p.left + p.width - rightInset;
+            for (int q = 0; q < steps; q++) {
+                float ya = yTop + (yBot - yTop) * q / steps;
+                float yb = yTop + (yBot - yTop) * (q + 1) / steps;
+                float a = aTop + (aBot - aTop) * (q + 0.5f) / steps;
+                mTrailPaint.setColor(colorAlpha(p.e.color, a));
+                canvas.drawRect(p.left, ya, right, yb, mTrailPaint);
+            }
         }
-        mTrailPaint.setShader(null);
     }
 
     private static int colorAlpha(int rgb, float alpha) {
